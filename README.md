@@ -11,12 +11,12 @@
 | Repository | 目錄 | 文件數 | 完成日期 | 說明 |
 |------------|------|--------|----------|------|
 | [entity-manager](https://github.com/openbmc/entity-manager) | [entity-manager/](entity-manager/) | 13 | 2025-12-19 | 執行時期硬體配置管理 |
+| [dbus-sensors](https://github.com/openbmc/dbus-sensors) | [dbus-sensors/](dbus-sensors/) | 17 | 2025-12-19 | 感測器讀取守護程式 |
 
 ### 📝 計畫中的 Repository
 
 | Repository | 優先順序 | 說明 |
 |------------|---------|------|
-| [dbus-sensors](https://github.com/openbmc/dbus-sensors) | 高 | 感測器讀取守護程式 |
 | [bmcweb](https://github.com/openbmc/bmcweb) | 高 | Redfish REST API 實作 |
 | [phosphor-state-manager](https://github.com/openbmc/phosphor-state-manager) | 中 | 電源狀態管理 |
 | [phosphor-dbus-interfaces](https://github.com/openbmc/phosphor-dbus-interfaces) | 中 | D-Bus 介面定義 |
@@ -32,13 +32,15 @@
 ```
 ~/notes/
 ├── README.md              # 本文件 - 專案總覽與進度追蹤
-├── entity-manager/        # Entity-Manager 技術文件
+├── entity-manager/        # Entity-Manager 技術文件 (13 篇)
 │   ├── Home.md           # 首頁與導覽
 │   ├── Architecture.md   # 架構概述
-│   ├── CoreConcepts.md   # 核心概念
-│   ├── DBusAPI.md        # D-Bus API 參考
-│   ├── ...               # 更多文件
-│   └── Troubleshooting.md
+│   └── ...               # 更多文件
+├── dbus-sensors/          # dbus-sensors 技術文件 (17 篇)
+│   ├── Home.md           # 首頁與導覽
+│   ├── Architecture.md   # 架構概述
+│   ├── SensorTypes.md    # 感測器類型總覽
+│   └── ...               # 更多文件
 └── {repository}/          # 未來新增的 repository
     └── ...
 ```
