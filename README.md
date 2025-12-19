@@ -13,6 +13,7 @@
 | [entity-manager](https://github.com/openbmc/entity-manager) | [entity-manager/](entity-manager/) | 13 | 2025-12-19 | 執行時期硬體配置管理 |
 | [dbus-sensors](https://github.com/openbmc/dbus-sensors) | [dbus-sensors/](dbus-sensors/) | 17 | 2025-12-19 | 感測器讀取守護程式 |
 | [phosphor-dbus-interfaces](https://github.com/openbmc/phosphor-dbus-interfaces) | [phosphor-dbus-interfaces/](phosphor-dbus-interfaces/) | 20 | 2025-12-19 | D-Bus 介面定義 |
+| [mctp](https://github.com/CodeConstruct/mctp) | [mctp/](mctp/) | 20 | 2025-12-19 | MCTP 使用者空間工具 |
 
 ### 📝 計畫中的 Repository
 
@@ -46,6 +47,13 @@
 │   ├── Architecture.md           # 架構概述
 │   ├── YAMLFormat.md             # YAML 介面定義格式
 │   ├── Namespaces.md             # 命名空間結構
+│   └── ...                       # 更多文件
+├── mctp/                          # CodeConstruct/mctp 技術文件 (20 篇)
+│   ├── Home.md                   # 首頁與導覽
+│   ├── Architecture.md           # 架構概述
+│   ├── MCTPOverview.md           # MCTP 協議概述
+│   ├── MctpdDaemon.md            # mctpd 守護程式
+│   ├── DBusOverview.md           # D-Bus 介面總覽
 │   └── ...                       # 更多文件
 └── {repository}/                  # 未來新增的 repository
     └── ...
