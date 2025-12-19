@@ -1,0 +1,339 @@
+# PLDM Type 2: Platform Monitoring and Control
+
+Platform M&C Type 提供平台監控與控制功能，包括 Sensor、Effecter、PDR 和事件管理。
+
+---
+
+## 概述
+
+| 欄位 | 值 |
+|------|-----|
+| **Type Code** | 0x02 |
+| **規範** | DSP0248 |
+| **功能** | Sensor、Effecter、PDR、事件 |
+
+---
+
+## 核心概念
+
+### Platform Descriptor Records (PDR)
+
+PDR 是描述平台資源的標準化記錄格式：
+
+```mermaid
+graph TB
+    PDR["PDR Repository"]
+    PDR --> Terminus["Terminus Locator PDR"]
+    PDR --> NumSensor["Numeric Sensor PDR"]
+    PDR --> StateSensor["State Sensor PDR"]
+    PDR --> NumEffecter["Numeric Effecter PDR"]
+    PDR --> StateEffecter["State Effecter PDR"]
+    PDR --> Entity["Entity Association PDR"]
+    PDR --> FRU["FRU Record Set PDR"]
+```
+
+### PDR 類型
+
+| Type | 名稱 | 說明 |
+|------|------|------|
+| 1 | Terminus Locator | 描述 Terminus |
+| 2 | Numeric Sensor | 數值型 Sensor 定義 |
+| 4 | Numeric Sensor Init | Sensor 初始化配置 |
+| 11 | State Sensor | 狀態型 Sensor 定義 |
+| 9 | Numeric Effecter | 數值型 Effecter 定義 |
+| 14 | State Effecter | 狀態型 Effecter 定義 |
+| 15 | Entity Association | 實體關聯 |
+| 20 | FRU Record Set | FRU 記錄集 |
+
+---
+
+## 主要命令
+
+### PDR 相關
+
+| Command | Code | 說明 |
+|---------|------|------|
+| GetPDR | 0x51 | 取得 PDR 記錄 |
+| GetPDRRepositoryInfo | 0x50 | 取得 PDR 儲存庫資訊 |
+
+### Sensor 相關
+
+| Command | Code | 說明 |
+|---------|------|------|
+| GetSensorReading | 0x11 | 讀取 Numeric Sensor |
+| GetStateSensorReadings | 0x21 | 讀取 State Sensor |
+| SetSensorEventEnable | 0x10 | 啟用 Sensor 事件 |
+
+### Effecter 相關
+
+| Command | Code | 說明 |
+|---------|------|------|
+| SetNumericEffecterValue | 0x31 | 設定 Numeric Effecter |
+| GetNumericEffecterValue | 0x32 | 讀取 Numeric Effecter |
+| SetStateEffecterStates | 0x39 | 設定 State Effecter |
+| GetStateEffecterStates | 0x3A | 讀取 State Effecter |
+
+### 事件相關
+
+| Command | Code | 說明 |
+|---------|------|------|
+| SetEventReceiver | 0x04 | 設定事件接收者 |
+| GetEventReceiver | 0x05 | 取得事件接收者 |
+| PlatformEventMessage | 0x0A | 平台事件訊息 |
+| PollForPlatformEventMessage | 0x0B | 輪詢事件 |
+
+---
+
+## GetPDR 命令
+
+### 請求格式
+
+| 欄位 | 大小 | 說明 |
+|------|------|------|
+| Record Handle | 4 bytes | PDR 記錄控制代碼 (0 = 第一筆) |
+| Data Transfer Handle | 4 bytes | 傳輸控制代碼 |
+| Transfer Op Flag | 1 byte | 傳輸操作旗標 |
+| Request Count | 2 bytes | 請求的位元組數 |
+| Record Change Number | 2 bytes | 記錄變更編號 |
+
+### 回應格式
+
+| 欄位 | 大小 | 說明 |
+|------|------|------|
+| Completion Code | 1 byte | |
+| Next Record Handle | 4 bytes | 下一筆記錄控制代碼 |
+| Next Data Transfer Handle | 4 bytes | |
+| Transfer Flag | 1 byte | |
+| Response Count | 2 bytes | 回傳的位元組數 |
+| Record Data | 可變 | PDR 記錄資料 |
+| Transfer CRC | 1 byte | CRC (選用) |
+
+### pldmtool 使用
+
+```bash
+# 取得第一筆 PDR
+$ pldmtool platform GetPDR -d 0
+{
+    "Record Handle": 1,
+    "PDR Type": "State Effecter PDR",
+    "PDR Data": { ... }
+}
+
+# 取得所有 PDR
+$ pldmtool platform GetPDR -a
+[
+    { "Record Handle": 1, "PDR Type": "Terminus Locator PDR", ... },
+    { "Record Handle": 2, "PDR Type": "State Sensor PDR", ... },
+    ...
+]
+```
+
+---
+
+## Sensor 類型
+
+### Numeric Sensor
+
+讀取連續數值（如溫度、電壓）：
+
+```mermaid
+graph LR
+    Sensor["Numeric Sensor"]
+    Sensor --> Reading["Sensor Reading<br/>(raw value)"]
+    Reading --> Convert["單位轉換"]
+    Convert --> Value["實際值<br/>(float/int)"]
+```
+
+**pldmtool 範例：**
+
+```bash
+$ pldmtool platform GetSensorReading -i 1
+{
+    "Sensor ID": 1,
+    "Sensor Data Size": "uint8",
+    "Operational State": "enabled",
+    "Present Reading": 45
+}
+```
+
+### State Sensor
+
+讀取離散狀態：
+
+| State Set | 說明 | 可能值 |
+|-----------|------|--------|
+| 1 | Health State | Normal, Critical, Warning |
+| 3 | Availability | Available, Unavailable |
+| 11 | Link State | Up, Down |
+| 196 | Operational Status | Enabled, Disabled |
+
+**pldmtool 範例：**
+
+```bash
+$ pldmtool platform GetStateSensorReadings -i 1
+{
+    "Sensor ID": 1,
+    "Composite Sensor Count": 1,
+    "State Readings": [
+        {
+            "Sensor Operational State": "Enabled",
+            "Present State": "Normal",
+            "Previous State": "Normal"
+        }
+    ]
+}
+```
+
+---
+
+## Effecter 類型
+
+### Numeric Effecter
+
+設定連續數值（如風扇轉速）：
+
+```bash
+$ pldmtool platform SetNumericEffecterValue -i 1 -d 5000
+{
+    "Response": "SUCCESS"
+}
+```
+
+### State Effecter
+
+設定離散狀態：
+
+```bash
+# 設定 Host 狀態同步
+$ pldmtool platform SetStateEffecterStates -i 1 -c 1 -s 2
+{
+    "Response": "SUCCESS"
+}
+```
+
+---
+
+## 事件機制
+
+### 事件訂閱流程
+
+```mermaid
+sequenceDiagram
+    participant BMC as BMC
+    participant Device as PLDM 裝置
+    
+    BMC->>Device: SetEventReceiver(BMC EID, BMC TID)
+    Device->>BMC: Response (Success)
+    
+    Note over Device: 事件發生
+    
+    Device->>BMC: PlatformEventMessage(Sensor Event)
+    BMC->>Device: Response (Ack)
+    BMC->>BMC: 更新 D-Bus 屬性
+```
+
+### 事件類型
+
+| Event Class | 說明 |
+|-------------|------|
+| 0x00 | Sensor Event |
+| 0x01 | Effecter Event |
+| 0x02 | Redfish Task Event |
+| 0x03 | Numeric Sensor Event |
+| 0x04 | heartbeat Timer elapsed Event |
+| 0xFA-0xFE | OEM Events |
+
+---
+
+## PDR JSON 配置
+
+在 OpenBMC 中，PDR 可透過 JSON 檔案定義：
+
+### State Sensor PDR 範例
+
+```json
+{
+    "entries": [
+        {
+            "type": 11,
+            "instance": 0,
+            "container_id": 1,
+            "entity_type": 45,
+            "entity_instance": 0,
+            "sensor_composite_count": 1,
+            "possible_states": [
+                {
+                    "set_id": 196,
+                    "state_ids": [1, 2, 3]
+                }
+            ],
+            "dbus": {
+                "path": "/xyz/openbmc_project/state/host0",
+                "interface": "xyz.openbmc_project.State.Host",
+                "property_name": "CurrentHostState",
+                "property_type": "string",
+                "property_values": {
+                    "1": "xyz.openbmc_project.State.Host.HostState.Off",
+                    "2": "xyz.openbmc_project.State.Host.HostState.Running",
+                    "3": "xyz.openbmc_project.State.Host.HostState.Quiesced"
+                }
+            }
+        }
+    ]
+}
+```
+
+### State Effecter PDR 範例
+
+```json
+{
+    "entries": [
+        {
+            "type": 11,
+            "instance": 0,
+            "container_id": 1,
+            "entity_type": 45,
+            "entity_instance": 0,
+            "effecter_composite_count": 1,
+            "possible_states": [
+                {
+                    "set_id": 196,
+                    "state_ids": [1, 2]
+                }
+            ],
+            "dbus": {
+                "path": "/xyz/openbmc_project/state/host0",
+                "interface": "xyz.openbmc_project.State.Host",
+                "property_name": "RequestedHostTransition",
+                "property_type": "string"
+            }
+        }
+    ]
+}
+```
+
+---
+
+## OpenBMC 實作
+
+### 原始碼位置
+
+| 檔案 | 說明 |
+|------|------|
+| `libpldmresponder/platform.cpp` | Platform Handler |
+| `libpldmresponder/pdr_*.hpp` | PDR 生成 |
+| `libpldmresponder/platform_state_*.hpp` | State Sensor/Effecter |
+| `platform-mc/sensor_manager.cpp` | Sensor 管理 |
+| `platform-mc/terminus.cpp` | Terminus 管理 |
+
+---
+
+## 相關文件
+
+- [PDRImplementation](PDRImplementation.md) - PDR 實作細節
+- [PlatformMC](PlatformMC.md) - Platform MC 模組
+- [DMTFSpecifications](DMTFSpecifications.md) - DSP0248 規範
+
+---
+
+*返回 [Home](Home.md)*
