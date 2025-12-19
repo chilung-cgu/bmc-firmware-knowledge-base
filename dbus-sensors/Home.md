@@ -55,6 +55,33 @@
 
 ---
 
+## 📖 建議閱讀路徑
+
+### 🚀 新手入門
+1. [架構概述](Architecture.md) - 了解 Reactor 模式
+2. [感測器類型總覽](SensorTypes.md) - 認識支援的感測器
+3. [Entity-Manager 整合](EntityManagerIntegration.md) - 了解配置流程
+
+### 🔧 感測器開發者
+1. [架構概述](Architecture.md) - 了解整體架構
+2. 選擇對應的感測器文件：
+   - 溫度：[Hwmon 溫度感測器](HwmonTempSensor.md)
+   - 電源：[PSU 感測器](PSUSensor.md)
+   - CPU：[CPU 感測器](CPUSensor.md)
+3. [設定指南](ConfigurationGuide.md) - 撰寫配置
+4. [閾值設定](ThresholdConfiguration.md) - 設定警告閾值
+
+### 🔌 整合開發者
+1. [D-Bus API](DBusAPI.md) - 了解感測器介面
+2. [Entity-Manager 整合](EntityManagerIntegration.md) - Reactor 模式
+3. [外部感測器](ExternalSensor.md) - 自訂感測器來源
+
+### 🔍 問題排查
+1. [故障排除](Troubleshooting.md) - 診斷問題
+2. [D-Bus API](DBusAPI.md) - 驗證感測器物件
+
+---
+
 ## 文件目錄
 
 ### 🏗️ 核心文件

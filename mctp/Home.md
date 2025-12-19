@@ -23,6 +23,31 @@
 
 ---
 
+## 📖 建議閱讀路徑
+
+### 🚀 新手入門
+1. [QuickStart](QuickStart.md) - 快速開始使用
+2. [MCTPOverview](MCTPOverview.md) - 了解 MCTP 協議基礎
+3. [Architecture](Architecture.md) - 認識系統架構
+
+### 🔧 開發者路線
+1. [Architecture](Architecture.md) - 系統設計
+2. [KernelStack](KernelStack.md) - 核心 API 與 Socket
+3. [MctpCommand](MctpCommand.md) - 命令行工具
+4. [MctpdDaemon](MctpdDaemon.md) - 守護程式配置
+5. [DBusOverview](DBusOverview.md) → [InterfaceAPI](InterfaceAPI.md) → [EndpointAPI](EndpointAPI.md) - D-Bus API
+
+### 🌉 進階功能
+1. [EndpointDiscovery](EndpointDiscovery.md) - 端點發現機制
+2. [BridgeMode](BridgeMode.md) - 橋接器與 EID 池
+3. [OpenBMCIntegration](OpenBMCIntegration.md) - 整合其他 OpenBMC 服務
+
+### 🔍 問題排查
+1. [Troubleshooting](Troubleshooting.md) - 診斷問題
+2. [TestTools](TestTools.md) - 除錯工具
+
+---
+
 ## 📚 文件導覽
 
 ### 核心概念

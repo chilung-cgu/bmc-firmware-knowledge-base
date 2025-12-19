@@ -37,6 +37,26 @@
 
 ---
 
+## 📖 建議閱讀路徑
+
+### 🚀 新手入門
+1. [架構概述](Architecture.md) - 了解系統設計
+2. [核心概念](CoreConcepts.md) - 學習 Entity、Exposes、Probe
+3. [設定指南](ConfigurationGuide.md) - 開始撰寫配置
+
+### 🔧 平台開發者
+1. [架構概述](Architecture.md) - 了解整體架構
+2. [Probe 語法](ProbeSyntax.md) - 掌握探測語法
+3. [設定範例](ExampleConfigurations.md) - 參考實際範例
+4. [FruDevice 守護程式](FruDevice.md) - I2C/FRU 整合
+5. [dbus-sensors 整合](DbusSensorsIntegration.md) - 感測器配置
+
+### 🔍 問題排查
+1. [故障排除](Troubleshooting.md) - 診斷問題
+2. [D-Bus API](DBusAPI.md) - 驗證物件與屬性
+
+---
+
 ## 文件目錄
 
 ### 🏗️ 核心文件

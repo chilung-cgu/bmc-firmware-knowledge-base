@@ -19,7 +19,34 @@
 
 ---
 
-## 🗂️ 文件導覽
+## 📖 建議閱讀路徑
+
+### 🚀 新手入門
+1. [Architecture](Architecture.md) - 了解系統架構
+2. [Namespaces](Namespaces.md) - 認識命名空間結構
+3. [YAMLFormat](YAMLFormat.md) - 學習介面定義格式
+
+### 🔧 介面開發者
+1. [Architecture](Architecture.md) - 了解設計原則
+2. [YAMLFormat](YAMLFormat.md) - 掌握 YAML 語法
+3. [CodeGeneration](CodeGeneration.md) - 學習程式碼生成
+4. [Requirements](Requirements.md) - 遵循設計規範
+5. [BuildConfig](BuildConfig.md) - 整合建置系統
+
+### 📡 介面使用者
+1. [Namespaces](Namespaces.md) - 找到需要的命名空間
+2. 選擇對應的介面文件：
+   - 感測器：[SensorInterfaces](SensorInterfaces.md)
+   - 狀態管理：[StateInterfaces](StateInterfaces.md)
+   - 硬體清單：[InventoryInterfaces](InventoryInterfaces.md)
+3. [CommonDBusTypes](CommonDBusTypes.md) - 了解常用型別
+4. [Associations](Associations.md) - 學習關聯機制
+
+### 🔍 問題排查
+1. [Troubleshooting](Troubleshooting.md) - 診斷問題
+2. [Errors](Errors.md) - 了解錯誤處理
+
+---
 
 ### 入門與架構
 
