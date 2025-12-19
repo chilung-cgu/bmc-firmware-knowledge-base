@@ -15,6 +15,7 @@
 | [phosphor-dbus-interfaces](https://github.com/openbmc/phosphor-dbus-interfaces) | [phosphor-dbus-interfaces/](phosphor-dbus-interfaces/) | 20 | 2025-12-19 | D-Bus 介面定義 |
 | [mctp](https://github.com/CodeConstruct/mctp) | [mctp/](mctp/) | 20 | 2025-12-19 | MCTP 使用者空間工具 |
 | [pldm](https://github.com/openbmc/pldm) | [pldm/](pldm/) | 25 | 2025-12-19 | PLDM 平台管理協議 |
+| [bmcweb](https://github.com/openbmc/bmcweb) | [bmcweb/](bmcweb/) | 25 | 2025-12-19 | Redfish REST API 實作 |
 
 
 ### 📝 計畫中的 Repository
@@ -25,7 +26,6 @@
 
 | Repository | 說明 | 理由 |
 |------------|------|------|
-| [bmcweb](https://github.com/openbmc/bmcweb) | Redfish REST API 實作 | 外部存取 BMC 的主要介面，理解 API 設計 |
 | [sdbusplus](https://github.com/openbmc/sdbusplus) | C++ D-Bus 函式庫 | 理解 D-Bus bindings 生成機制，所有服務的基礎 |
 | [phosphor-state-manager](https://github.com/openbmc/phosphor-state-manager) | 電源/系統狀態管理 | BMC、Host、Chassis 狀態機，核心控制流程 |
 | [phosphor-logging](https://github.com/openbmc/phosphor-logging) | 事件日誌系統 | SEL、Redfish Event Log，除錯必備 |
@@ -84,6 +84,12 @@
 │   ├── PLDMOverview.md           # PLDM 協議概述
 │   ├── TypePlatform.md           # Platform M&C Type
 │   ├── Pldmd.md                  # pldmd 守護程式
+│   └── ...                       # 更多文件
+├── bmcweb/                        # openbmc/bmcweb 技術文件 (25 篇)
+│   ├── Home.md                   # 首頁與導覽
+│   ├── Architecture.md           # 架構概述
+│   ├── RedfishOverview.md        # Redfish 協議概述
+│   ├── QuickStart.md             # 快速入門
 │   └── ...                       # 更多文件
 └── {repository}/                  # 未來新增的 repository
     └── ...
