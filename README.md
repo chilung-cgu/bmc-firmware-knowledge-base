@@ -16,6 +16,7 @@
 | [mctp](https://github.com/CodeConstruct/mctp) | [mctp/](mctp/) | 20 | 2025-12-19 | MCTP 使用者空間工具 |
 | [pldm](https://github.com/openbmc/pldm) | [pldm/](pldm/) | 25 | 2025-12-19 | PLDM 平台管理協議 |
 | [bmcweb](https://github.com/openbmc/bmcweb) | [bmcweb/](bmcweb/) | 25 | 2025-12-19 | Redfish REST API 實作 |
+| [OpenBIC yv4-sd](https://github.com/facebook/OpenBIC) | [openbic/sd/](openbic/sd/) | 25 | 2025-12-19 | Meta OpenBIC Sentinel Dome BIC |
 
 
 ### 📝 計畫中的 Repository
