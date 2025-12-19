@@ -12,6 +12,7 @@
 |------------|------|--------|----------|------|
 | [entity-manager](https://github.com/openbmc/entity-manager) | [entity-manager/](entity-manager/) | 13 | 2025-12-19 | 執行時期硬體配置管理 |
 | [dbus-sensors](https://github.com/openbmc/dbus-sensors) | [dbus-sensors/](dbus-sensors/) | 17 | 2025-12-19 | 感測器讀取守護程式 |
+| [phosphor-dbus-interfaces](https://github.com/openbmc/phosphor-dbus-interfaces) | [phosphor-dbus-interfaces/](phosphor-dbus-interfaces/) | 20 | 2025-12-19 | D-Bus 介面定義 |
 
 ### 📝 計畫中的 Repository
 
@@ -19,7 +20,6 @@
 |------------|---------|------|
 | [bmcweb](https://github.com/openbmc/bmcweb) | 高 | Redfish REST API 實作 |
 | [phosphor-state-manager](https://github.com/openbmc/phosphor-state-manager) | 中 | 電源狀態管理 |
-| [phosphor-dbus-interfaces](https://github.com/openbmc/phosphor-dbus-interfaces) | 中 | D-Bus 介面定義 |
 | [sdbusplus](https://github.com/openbmc/sdbusplus) | 中 | C++ D-Bus 函式庫 |
 | [phosphor-pid-control](https://github.com/openbmc/phosphor-pid-control) | 低 | PID 風扇控制 |
 | [peci-pcie](https://github.com/openbmc/peci-pcie) | 低 | PCIe 裝置偵測 |
@@ -31,17 +31,23 @@
 
 ```
 ~/notes/
-├── README.md              # 本文件 - 專案總覽與進度追蹤
-├── entity-manager/        # Entity-Manager 技術文件 (13 篇)
-│   ├── Home.md           # 首頁與導覽
-│   ├── Architecture.md   # 架構概述
-│   └── ...               # 更多文件
-├── dbus-sensors/          # dbus-sensors 技術文件 (17 篇)
-│   ├── Home.md           # 首頁與導覽
-│   ├── Architecture.md   # 架構概述
-│   ├── SensorTypes.md    # 感測器類型總覽
-│   └── ...               # 更多文件
-└── {repository}/          # 未來新增的 repository
+├── README.md                      # 本文件 - 專案總覽與進度追蹤
+├── entity-manager/                # Entity-Manager 技術文件 (13 篇)
+│   ├── Home.md                   # 首頁與導覽
+│   ├── Architecture.md           # 架構概述
+│   └── ...                       # 更多文件
+├── dbus-sensors/                  # dbus-sensors 技術文件 (17 篇)
+│   ├── Home.md                   # 首頁與導覽
+│   ├── Architecture.md           # 架構概述
+│   ├── SensorTypes.md            # 感測器類型總覽
+│   └── ...                       # 更多文件
+├── phosphor-dbus-interfaces/      # phosphor-dbus-interfaces 技術文件 (20 篇)
+│   ├── Home.md                   # 首頁與導覽
+│   ├── Architecture.md           # 架構概述
+│   ├── YAMLFormat.md             # YAML 介面定義格式
+│   ├── Namespaces.md             # 命名空間結構
+│   └── ...                       # 更多文件
+└── {repository}/                  # 未來新增的 repository
     └── ...
 ```
 
