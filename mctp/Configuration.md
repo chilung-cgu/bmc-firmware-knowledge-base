@@ -28,7 +28,8 @@ mode = "bus-owner"
 # MCTP 協議配置
 [mctp]
 # 訊息逾時（毫秒）
-message_timeout_ms = 250
+# 程式碼硬編碼預設值為 250，出廠配置檔設為 30
+message_timeout_ms = 30
 
 # 端點 UUID（可選，預設使用系統 UUID）
 # uuid = "21f0f554-7f7c-4211-9ca1-6d0f000ea9e7"
@@ -40,6 +41,9 @@ dynamic_eid_range = [8, 254]
 
 # 橋接器最大 EID 池大小
 max_pool_size = 15
+
+# 橋接器下游端點輪詢間隔（毫秒），0 為禁用
+endpoint_poll_ms = 0
 ```
 
 ---
@@ -86,8 +90,12 @@ MCTP 控制協議訊息的逾時時間。
 | 項目 | 值 |
 |------|-----|
 | **型別** | integer（毫秒） |
-| **預設值** | 250 |
-| **建議範圍** | 30-1000 |
+| **程式碼預設值** | 250（`setup_config_defaults()` 硬編碼） |
+| **出廠配置檔值** | 30（`conf/mctpd.conf` 附帶值） |
+| **有效範圍** | 1-100000 |
+
+> [!NOTE]
+> 程式碼中 `setup_config_defaults()` 將逾時設為 250ms，但專案附帶的 `conf/mctpd.conf` 配置檔覆蓋為 30ms。實際生效值取決於是否載入了配置檔。若配置檔不存在且未透過 `-c` 指定，則使用程式碼預設的 250ms。
 
 **說明**：
 - 設定過短可能導致慢速設備無法回應
@@ -98,7 +106,7 @@ MCTP 控制協議訊息的逾時時間。
 
 ```toml
 [mctp]
-message_timeout_ms = 250
+message_timeout_ms = 30
 ```
 
 ```toml
@@ -199,6 +207,39 @@ max_pool_size = 15
 max_pool_size = 50
 ```
 
+### endpoint_poll_ms
+
+橋接器下游端點的輪詢間隔。啟用後，mctpd 會定期對橋接器 EID 池中的每個 EID 發送 Get Endpoint ID 命令，檢查端點是否可達。
+
+| 項目 | 值 |
+|------|-----|
+| **型別** | integer（毫秒） |
+| **預設值** | 0（禁用） |
+| **有效範圍** | 2500-10000（設為 0 禁用） |
+
+**說明**：
+- 啟用後，mctpd 會在 `AssignEndpoint` 分配橋接器 EID 池後啟動輪詢
+- 成功回應的端點會被自動加入 D-Bus 並發出 `InterfacesAdded` 訊號
+- 未回應的端點會持續輪詢直到可達
+- 符合 DSP0236 第 8.17.6 節的 EID 回收機制
+
+> [!NOTE]
+> 此功能為 unreleased 功能（v2.4 之後），用於 bridged endpoint polling。
+
+**範例**：
+
+```toml
+[bus-owner]
+# 每 5 秒輪詢一次
+endpoint_poll_ms = 5000
+```
+
+```toml
+[bus-owner]
+# 禁用輪詢（預設）
+endpoint_poll_ms = 0
+```
+
 ---
 
 ## 配置範例場景
@@ -210,11 +251,12 @@ max_pool_size = 50
 mode = "bus-owner"
 
 [mctp]
-message_timeout_ms = 250
+message_timeout_ms = 30
 
 [bus-owner]
 dynamic_eid_range = [8, 254]
 max_pool_size = 15
+endpoint_poll_ms = 0
 ```
 
 ### Endpoint 模式配置
@@ -253,6 +295,8 @@ message_timeout_ms = 500
 [bus-owner]
 dynamic_eid_range = [8, 254]
 max_pool_size = 30
+# 啟用橋接下游輪詢
+endpoint_poll_ms = 5000
 ```
 
 ---

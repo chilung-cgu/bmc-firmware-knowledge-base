@@ -293,7 +293,7 @@ graph TD
 
 ### 超時處理
 
-mctpd 會等待 `message_timeout_ms`（預設 250ms）後放棄。
+mctpd 會等待 `message_timeout_ms` 後放棄（程式碼預設 250ms，出廠配置檔設為 30ms）。
 
 ---
 

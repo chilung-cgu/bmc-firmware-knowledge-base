@@ -216,6 +216,26 @@ dynamic_eid_range = [8, 254]
 - 從範圍中找到足夠大的空閒區塊
 - 如果無法找到連續區塊，分配失敗
 
+### endpoint_poll_ms
+
+啟用後，mctpd 會在分配 EID 池給橋接器後，自動開始輪詢下游端點：
+
+```toml
+# /etc/mctpd.conf
+[bus-owner]
+# 每 5 秒輪詢一次橋接下游端點
+endpoint_poll_ms = 5000
+```
+
+**說明**：
+- 設為 0 時禁用（預設）
+- 有效範圍：2500-10000 毫秒
+- 成功回應的端點會自動建立 D-Bus 物件和路由
+- 未回應的端點會持續輪詢直到可達
+
+> [!NOTE]
+> 此功能為 unreleased 功能（v2.4 之後），可替代手動呼叫 `Network.LearnEndpoint` 逐一發現下游端點。
+
 ---
 
 ## 多層橋接

@@ -22,23 +22,23 @@ graph TB
         IPMI["IPMI"]
         WebUI["Web UI"]
     end
-    
+
     subgraph Management["管理層"]
         BMC["BMC<br/>OpenBMC"]
     end
-    
+
     subgraph Protocol["協議層"]
         PLDM["PLDM"]
         MCTP["MCTP"]
     end
-    
+
     subgraph Platform["平台層"]
         Host["Host CPU/BIOS"]
         GPU["GPU"]
         NIC["NIC"]
         Storage["Storage"]
     end
-    
+
     Applications --> Management
     Management <--> PLDM
     PLDM <--> MCTP
@@ -53,13 +53,13 @@ graph TB
 
 每個 PLDM 訊息包含以下欄位：
 
-| 欄位 | 大小 | 說明 |
-|------|------|------|
-| Instance ID | 5 bits | 請求/回應配對識別符 |
+| 欄位           | 大小   | 說明                     |
+| -------------- | ------ | ------------------------ |
+| Instance ID    | 5 bits | 請求/回應配對識別符      |
 | Header Version | 2 bits | PLDM 標頭版本 (固定 00b) |
-| PLDM Type | 6 bits | PLDM 類型代碼 |
-| Command Code | 8 bits | 命令代碼 |
-| Payload | 可變 | 命令特定資料 |
+| PLDM Type      | 6 bits | PLDM 類型代碼            |
+| Command Code   | 8 bits | 命令代碼                 |
+| Payload        | 可變   | 命令特定資料             |
 
 ### 請求訊息格式
 
@@ -88,15 +88,15 @@ Bit 6 of Byte 0: D bit (Datagram, no response expected)
 
 ### Completion Codes
 
-| 代碼 | 名稱 | 說明 |
-|------|------|------|
-| 0x00 | PLDM_SUCCESS | 成功 |
-| 0x01 | PLDM_ERROR | 一般錯誤 |
-| 0x02 | PLDM_ERROR_INVALID_DATA | 無效資料 |
-| 0x03 | PLDM_ERROR_INVALID_LENGTH | 長度錯誤 |
-| 0x04 | PLDM_ERROR_NOT_READY | 尚未就緒 |
-| 0x05 | PLDM_ERROR_UNSUPPORTED_PLDM_CMD | 不支援的命令 |
-| 0x20 | PLDM_ERROR_INVALID_PLDM_TYPE | 無效 PLDM Type |
+| 代碼 | 名稱                            | 說明           |
+| ---- | ------------------------------- | -------------- |
+| 0x00 | PLDM_SUCCESS                    | 成功           |
+| 0x01 | PLDM_ERROR                      | 一般錯誤       |
+| 0x02 | PLDM_ERROR_INVALID_DATA         | 無效資料       |
+| 0x03 | PLDM_ERROR_INVALID_LENGTH       | 長度錯誤       |
+| 0x04 | PLDM_ERROR_NOT_READY            | 尚未就緒       |
+| 0x05 | PLDM_ERROR_UNSUPPORTED_PLDM_CMD | 不支援的命令   |
+| 0x20 | PLDM_ERROR_INVALID_PLDM_TYPE    | 無效 PLDM Type |
 
 ---
 
@@ -104,16 +104,16 @@ Bit 6 of Byte 0: D bit (Datagram, no response expected)
 
 PLDM 定義了多種 Type，每種處理不同的管理功能：
 
-| Type Code | 名稱 | 規範 | 說明 |
-|-----------|------|------|------|
-| 0 | Base | DSP0240 | 基礎探索與版本查詢 |
-| 1 | SMBIOS | DSP0246 | SMBIOS 表格傳輸 |
-| 2 | Platform M&C | DSP0248 | 平台監控與控制 |
-| 3 | BIOS Control | DSP0247 | BIOS 配置管理 |
-| 4 | FRU Data | DSP0257 | FRU 資料存取 |
-| 5 | Firmware Update | DSP0267 | 韌體更新 |
-| 6 | Redfish Device Enablement | DSP0218 | Redfish 整合 |
-| 63 | OEM | - | 廠商自訂 |
+| Type Code | 名稱                      | 規範    | 說明               |
+| --------- | ------------------------- | ------- | ------------------ |
+| 0         | Base                      | DSP0240 | 基礎探索與版本查詢 |
+| 1         | SMBIOS                    | DSP0246 | SMBIOS 表格傳輸    |
+| 2         | Platform M&C              | DSP0248 | 平台監控與控制     |
+| 3         | BIOS Control              | DSP0247 | BIOS 配置管理      |
+| 4         | FRU Data                  | DSP0257 | FRU 資料存取       |
+| 5         | Firmware Update           | DSP0267 | 韌體更新           |
+| 6         | Redfish Device Enablement | DSP0218 | Redfish 整合       |
+| 63        | OEM                       | -       | 廠商自訂           |
 
 ### Type 關係圖
 
@@ -125,7 +125,7 @@ graph TD
     FRU["Type 4: FRU Data"]
     FWUpdate["Type 5: Firmware Update"]
     OEM["Type 63: OEM"]
-    
+
     Base --> Platform
     Base --> BIOS
     Base --> FRU
@@ -144,12 +144,12 @@ sequenceDiagram
     participant BMC as BMC (EID: 8)
     participant MCTP as MCTP Layer
     participant Host as Host (EID: 9)
-    
+
     Note over BMC,Host: PLDM Request
     BMC->>MCTP: PLDM Message
     MCTP->>MCTP: Add MCTP Header
     MCTP->>Host: MCTP Packet (Type=1)
-    
+
     Note over BMC,Host: PLDM Response
     Host->>MCTP: PLDM Response
     MCTP->>MCTP: Add MCTP Header
@@ -175,13 +175,49 @@ MCTP Packet:
 
 ## Terminus 概念
 
-在 PLDM 中，**Terminus** 是一個 PLDM 通訊端點：
+在 PLDM 中，**Terminus** 是一個 PLDM 通訊端點（裝置層級的邏輯實體）：
 
-| 術語 | 說明 |
-|------|------|
-| **Terminus** | PLDM 通訊端點，具有唯一 TID |
-| **TID** | Terminus ID，8-bit 識別符 |
-| **EID** | MCTP Endpoint ID，傳輸層位址 |
+| 術語         | 說明                                                         |
+| ------------ | ------------------------------------------------------------ |
+| **Terminus** | PLDM 通訊端點，具有唯一 TID。代表一個**裝置**而非單一 Sensor |
+| **TID**      | Terminus ID，8-bit 識別符（0x00 保留、0xFF 為未分配）        |
+| **EID**      | MCTP Endpoint ID，傳輸層位址                                 |
+
+### Terminus 是什麼？實體例子
+
+一個 Terminus 是一個能夠收送 PLDM 訊息的裝置端點。每個 Terminus 可擁有多個 Sensor 和 Effecter：
+
+```
+┌─────────────────────────────────────────┐
+│  GPU（= 1 個 Terminus, TID = 5）         │
+│                                         │
+│  ┌───────────┐ ┌───────────┐ ┌────────┐ │
+│  │Core 溫度  │ │Memory 溫度│ │VRM 溫度│ │
+│  │Sensor #1  │ │Sensor #2  │ │Sensor #3││
+│  └───────────┘ └───────────┘ └────────┘ │
+│                                         │
+│  GPU 內部的管理微控制器負責回應 PLDM 訊息│
+└──────────────┬──────────────────────────┘
+               │ MCTP (PCIe VDM / SMBus)
+┌──────────────▼──────────────────────────┐
+│  BMC（= 另一個 Terminus, TID = 1）       │
+│  pldmd → GetSensorReading(TID=5, ID=1) │
+└─────────────────────────────────────────┘
+```
+
+> [!IMPORTANT]
+> **GPU 整體是一個 Terminus，Sensor 不是 Terminus。**
+> 3 個溫度 Sensor 都屬於同一個 GPU Terminus，BMC 透過 `GetSensorReading(TID, SensorID)` 指定要讀哪一個 Sensor。
+> Terminus 的粒度通常與「裝置上有無獨立管理微控制器/firmware」對齊。
+
+常見的 Terminus：
+
+| Terminus 範例      | TID | 說明                  |
+| ------------------ | --- | --------------------- |
+| BMC 自身           | 1   | Management Controller |
+| Host BIOS/UEFI     | 2   | Host Terminus         |
+| GPU                | 3   | GPU 管理微控制器      |
+| NIC (SmartNIC/DPU) | 4   | 網路裝置管理控制器    |
 
 ### TID 分配
 
@@ -189,13 +225,13 @@ MCTP Packet:
 sequenceDiagram
     participant BMC as BMC (TID: 1)
     participant New as New Terminus
-    
+
     Note over BMC,New: TID 分配流程
     New->>BMC: GetTID Request
     BMC->>New: GetTID Response (TID: 1)
     BMC->>New: SetTID Request (TID: 2)
     New->>BMC: SetTID Response (Success)
-    
+
     Note over BMC,New: 之後通訊使用 TID 識別
 ```
 
@@ -209,7 +245,7 @@ sequenceDiagram
 sequenceDiagram
     participant Requester
     participant Responder
-    
+
     Requester->>Responder: Request (Instance ID = 5)
     Note right of Responder: 處理請求
     Responder->>Requester: Response (Instance ID = 5)
@@ -221,11 +257,11 @@ sequenceDiagram
 sequenceDiagram
     participant BMC as BMC (Requester)
     participant Device as Device (Event Source)
-    
+
     Note over BMC,Device: 事件訂閱
     BMC->>Device: SetEventReceiver
     Device->>BMC: Response (Success)
-    
+
     Note over BMC,Device: 事件發生
     Device->>BMC: PlatformEventMessage
     BMC->>Device: Response (Ack)
@@ -237,12 +273,12 @@ sequenceDiagram
 
 Instance ID 用於匹配請求與回應：
 
-| 規則 | 說明 |
-|------|------|
-| 範圍 | 0-31 (5 bits) |
-| 唯一性 | 每個 (Requester, Responder) 配對須唯一 |
-| 生命週期 | 收到回應或超時後釋放 |
-| 重試 | 重試時使用相同 Instance ID |
+| 規則     | 說明                                   |
+| -------- | -------------------------------------- |
+| 範圍     | 0-31 (5 bits)                          |
+| 唯一性   | 每個 (Requester, Responder) 配對須唯一 |
+| 生命週期 | 收到回應或超時後釋放                   |
+| 重試     | 重試時使用相同 Instance ID             |
 
 ```cpp
 // Instance ID 分配範例
@@ -253,7 +289,7 @@ public:
         nextId[eid] = (nextId[eid] + 1) % 32;
         return id;
     }
-    
+
     void free(mctp_eid_t eid, uint8_t instanceId) {
         // 標記為可重用
     }
@@ -270,4 +306,4 @@ public:
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

@@ -18,28 +18,28 @@ sequenceDiagram
     participant Handler as libpldmresponder
     participant libpldm as libpldm
     participant DBus as D-Bus
-    
+
     Note over Remote,DBus: 步驟 a: 接收請求
     Remote->>MCTP: PLDM Request Message
     MCTP->>pldmd: Forward to pldmd
-    
+
     Note over Remote,DBus: 步驟 b: 路由到 Handler
     pldmd->>pldmd: 解析 PLDM Type/Command
     pldmd->>Handler: dispatch(request)
-    
+
     Note over Remote,DBus: 步驟 c: 解碼請求
     Handler->>libpldm: decode_foo_req()
     libpldm-->>Handler: 解碼後的欄位
-    
+
     Note over Remote,DBus: 步驟 d: 處理請求
     Handler->>DBus: 讀取/寫入屬性
     DBus-->>Handler: 屬性值
     Handler->>Handler: 業務邏輯處理
-    
+
     Note over Remote,DBus: 步驟 e: 編碼回應
     Handler->>libpldm: encode_foo_resp()
     libpldm-->>Handler: 回應訊息
-    
+
     Note over Remote,DBus: 步驟 f: 發送回應
     Handler-->>pldmd: Response Message
     pldmd->>MCTP: Send Response
@@ -149,22 +149,22 @@ sequenceDiagram
     participant pldmd as pldmd
     participant MCTP as MCTP 傳輸層
     participant Remote as 遠端 PLDM 裝置
-    
+
     Note over App,Remote: 步驟 a: 準備請求
     App->>Req: prepareRequest(eid, type, cmd, payload)
     Req->>libpldm: encode_foo_req()
     libpldm-->>Req: 編碼後的請求
-    
+
     Note over App,Remote: 步驟 b: 發送請求
     Req->>pldmd: sendRequest(request)
     pldmd->>MCTP: send(eid, message)
     MCTP->>Remote: PLDM Request
-    
+
     Note over App,Remote: 步驟 c: 接收回應
     Remote->>MCTP: PLDM Response
     MCTP->>pldmd: receive(response)
     pldmd->>Req: notifyResponse(instanceId, response)
-    
+
     Note over App,Remote: 步驟 d: 處理回應
     Req->>libpldm: decode_foo_resp()
     libpldm-->>Req: 解碼後的欄位
@@ -195,13 +195,13 @@ template <typename Callback>
 void sendRequest(mctp_eid_t eid, Request request, Callback callback) {
     // 分配 Instance ID
     auto instanceId = instanceIdDb.next(eid);
-    
+
     // 註冊回調
     responseCallbacks[eid][instanceId] = callback;
-    
+
     // 發送請求
     pldmd->send(eid, request);
-    
+
     // 設定超時
     startTimer(eid, instanceId, timeout);
 }
@@ -215,13 +215,13 @@ pldmd 透過 Instance ID 匹配回應與請求：
 void handleResponse(mctp_eid_t eid, Response response) {
     // 解析 Instance ID
     auto instanceId = response[0] & 0x1F;
-    
+
     // 查找對應的回調
     auto callback = responseCallbacks[eid][instanceId];
-    
+
     // 執行回調
     callback(response);
-    
+
     // 釋放 Instance ID
     instanceIdDb.free(eid, instanceId);
 }
@@ -259,42 +259,59 @@ flowchart TD
     LoadJSON --> ParsePDR["解析 JSON 生成 PDR"]
     ParsePDR --> CreateRepo["建立 PDR Repository"]
     CreateRepo --> HostPDR{"Host PDR?"}
-    
+
     HostPDR -->|Yes| FetchHost["從 Host 獲取 PDR"]
     FetchHost --> MergeRepo["合併到 Repository"]
-    
+
     HostPDR -->|No| Ready["PDR Ready"]
     MergeRepo --> Ready
-    
+
     Ready --> Serve["回應 GetPDR 請求"]
+```
+
+### platform-mc 端 PDR 拉取
+
+當 BMC 作為 Requester 從遠端 Terminus 拉回 PDR 時：
+
+```mermaid
+flowchart TD
+    Discover["MCTP 端點探索"] --> Init["TerminusManager.initMctpTerminus()"]
+    Init --> TID["GetTID / SetTID"]
+    TID --> Types["GetPLDMTypes / GetPLDMCommands"]
+    Types --> PlatInit["PlatformManager.initTerminus()"]
+    PlatInit --> FRU["GetFRURecordTable"]
+    FRU --> GetPDR["GetPDRRepositoryInfo → GetPDR 迴圈"]
+    GetPDR --> Parse["terminus→parseTerminusPDRs()"]
+    Parse --> EventCfg["SetEventReceiver"]
+    EventCfg --> Poll["startSensorPolling(tid)"]
 ```
 
 ### PDR JSON 格式
 
 ```json
 {
-    "entries": [
+  "entries": [
+    {
+      "type": 11,
+      "instance": 0,
+      "container_id": 1,
+      "entity_type": 45,
+      "entity_instance": 0,
+      "sensor_composite_count": 1,
+      "possible_states": [
         {
-            "type": 11,
-            "instance": 0,
-            "container_id": 1,
-            "entity_type": 45,
-            "entity_instance": 0,
-            "sensor_composite_count": 1,
-            "possible_states": [
-                {
-                    "set_id": 1,
-                    "state_ids": [1, 2]
-                }
-            ],
-            "dbus": {
-                "path": "/xyz/openbmc_project/state/host0",
-                "interface": "xyz.openbmc_project.State.Host",
-                "property_name": "CurrentHostState",
-                "property_type": "string"
-            }
+          "set_id": 1,
+          "state_ids": [1, 2]
         }
-    ]
+      ],
+      "dbus": {
+        "path": "/xyz/openbmc_project/state/host0",
+        "interface": "xyz.openbmc_project.State.Host",
+        "property_name": "CurrentHostState",
+        "property_type": "string"
+      }
+    }
+  ]
 }
 ```
 
@@ -310,16 +327,16 @@ sequenceDiagram
     participant pldmd as pldmd
     participant EventMgr as Event Manager
     participant DBus as D-Bus
-    
+
     Note over Device,DBus: 事件接收者註冊
     pldmd->>Device: SetEventReceiver
     Device->>pldmd: Response (Success)
-    
+
     Note over Device,DBus: 事件發生
     Device->>pldmd: PlatformEventMessage
     pldmd->>EventMgr: processEvent(eventData)
     EventMgr->>EventMgr: 解析事件類型
-    
+
     alt Sensor 事件
         EventMgr->>DBus: 更新 Sensor 值/狀態
     else Effecter 事件
@@ -327,7 +344,7 @@ sequenceDiagram
     else PLDM Log
         EventMgr->>DBus: 記錄日誌
     end
-    
+
     pldmd->>Device: Response (Acknowledged)
 ```
 
@@ -341,4 +358,4 @@ sequenceDiagram
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

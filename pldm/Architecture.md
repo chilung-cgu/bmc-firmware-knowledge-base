@@ -25,23 +25,23 @@ graph TB
         Host["Host (BIOS/OS)"]
         Devices["PLDM 裝置<br/>(GPU/NIC/Storage)"]
     end
-    
+
     subgraph Transport["傳輸層"]
         MCTP["MCTP<br/>Management Component<br/>Transport Protocol"]
     end
-    
+
     subgraph PLDM["PLDM Stack"]
         subgraph Core["核心元件"]
             pldmd["pldmd"]
             libpldm["libpldm"]
         end
-        
+
         subgraph Handlers["處理模組"]
             responder["libpldmresponder"]
             requester["requester"]
             platformmc["platform-mc"]
         end
-        
+
         subgraph Types["PLDM Types"]
             base["Base Handler"]
             platform["Platform Handler"]
@@ -50,14 +50,14 @@ graph TB
             fwup["FW Update"]
         end
     end
-    
+
     subgraph OpenBMC["OpenBMC 服務"]
         DBus["System D-Bus"]
         BIOSMgr["bios-settings-mgr"]
         EntityMgr["entity-manager"]
         Sensors["dbus-sensors"]
     end
-    
+
     External <--> MCTP
     MCTP <--> pldmd
     pldmd <--> libpldm
@@ -79,12 +79,12 @@ graph TB
 
 `pldmd` 是 PLDM 的中央守護程式，負責：
 
-| 功能 | 說明 |
-|------|------|
-| **訊息路由** | 接收 MCTP 訊息並分發給對應的 Handler |
-| **處理註冊** | 管理各 PLDM Type 的 Handler 註冊 |
-| **請求管理** | 追蹤 Instance ID 與請求/回應配對 |
-| **D-Bus 介面** | 提供服務介面給其他 OpenBMC 元件 |
+| 功能           | 說明                                 |
+| -------------- | ------------------------------------ |
+| **訊息路由**   | 接收 MCTP 訊息並分發給對應的 Handler |
+| **處理註冊**   | 管理各 PLDM Type 的 Handler 註冊     |
+| **請求管理**   | 追蹤 Instance ID 與請求/回應配對     |
+| **D-Bus 介面** | 提供服務介面給其他 OpenBMC 元件      |
 
 ```cpp
 // pldmd 主要職責
@@ -122,7 +122,7 @@ graph LR
         bios["bios.cpp<br/>BIOS Handler"]
         fru["fru.cpp<br/>FRU Handler"]
     end
-    
+
     Request["PLDM 請求"] --> base
     Request --> platform
     Request --> bios
@@ -139,13 +139,13 @@ Response handler(Request payload, size_t payloadLen);
 Response getPLDMTypes(Request request, size_t len) {
     // 1. 解碼請求 (使用 libpldm)
     decode_get_types_req(request, len, ...);
-    
+
     // 2. 處理邏輯
     uint8_t types = getSupportedTypes();
-    
+
     // 3. 編碼回應 (使用 libpldm)
     encode_get_types_resp(instanceId, PLDM_SUCCESS, types, response);
-    
+
     return response;
 }
 ```
@@ -156,11 +156,11 @@ Response getPLDMTypes(Request request, size_t len) {
 
 管理 BMC 作為 PLDM Requester 時的請求流程：
 
-| 元件 | 檔案 | 功能 |
-|------|------|------|
-| Handler | `handler.hpp` | 請求佇列管理與回應處理 |
-| Request | `request.hpp` | 請求封裝與重試邏輯 |
-| MCTP Discovery | `mctp_endpoint_discovery.cpp` | PLDM 端點探索 |
+| 元件           | 檔案                          | 功能                   |
+| -------------- | ----------------------------- | ---------------------- |
+| Handler        | `handler.hpp`                 | 請求佇列管理與回應處理 |
+| Request        | `request.hpp`                 | 請求封裝與重試邏輯     |
+| MCTP Discovery | `mctp_endpoint_discovery.cpp` | PLDM 端點探索          |
 
 ```mermaid
 sequenceDiagram
@@ -168,7 +168,7 @@ sequenceDiagram
     participant Req as Requester
     participant MCTP as MCTP Transport
     participant Term as PLDM Terminus
-    
+
     App->>Req: sendRequest(eid, request)
     Req->>Req: allocateInstanceId()
     Req->>MCTP: send(eid, pldmMsg)
@@ -184,14 +184,14 @@ sequenceDiagram
 
 Platform Monitoring and Control 的 MC (Management Controller) 端實作：
 
-| 元件 | 說明 |
-|------|------|
-| `terminus.cpp` | PLDM Terminus 管理 |
+| 元件                   | 說明                     |
+| ---------------------- | ------------------------ |
+| `terminus.cpp`         | PLDM Terminus 管理       |
 | `terminus_manager.cpp` | 多 Terminus 生命週期管理 |
-| `platform_manager.cpp` | PDR 與 Sensor 管理 |
-| `sensor_manager.cpp` | Sensor 讀取與事件處理 |
-| `event_manager.cpp` | PLDM 事件處理 |
-| `numeric_sensor.cpp` | 數值型 Sensor 實作 |
+| `platform_manager.cpp` | PDR 與 Sensor 管理       |
+| `sensor_manager.cpp`   | Sensor 讀取與事件處理    |
+| `event_manager.cpp`    | PLDM 事件處理            |
+| `numeric_sensor.cpp`   | 數值型 Sensor 實作       |
 
 ---
 
@@ -207,7 +207,7 @@ sequenceDiagram
     participant Handler as libpldmresponder
     participant libpldm as libpldm
     participant DBus as D-Bus
-    
+
     Host->>MCTP: PLDM Request (over MCTP)
     MCTP->>pldmd: Forward Request
     pldmd->>pldmd: Route by PLDM Type
@@ -231,7 +231,7 @@ sequenceDiagram
     participant libpldm as libpldm
     participant MCTP as MCTP Daemon
     participant Device as PLDM Device
-    
+
     App->>Req: Send PLDM Request
     Req->>libpldm: encode_xxx_req()
     Req->>pldmd: Queue Request
@@ -252,18 +252,18 @@ PLDM 透過 D-Bus 與 OpenBMC 其他服務互動：
 
 ### 提供的服務
 
-| 服務名稱 | 物件路徑 | 功能 |
-|----------|----------|------|
+| 服務名稱                   | 物件路徑                    | 功能        |
+| -------------------------- | --------------------------- | ----------- |
 | `xyz.openbmc_project.PLDM` | `/xyz/openbmc_project/pldm` | PLDM 主服務 |
 
 ### 使用的介面
 
-| 介面 | 用途 |
-|------|------|
-| `xyz.openbmc_project.Inventory.Item` | FRU 資料發布 |
-| `xyz.openbmc_project.Sensor.Value` | Sensor 數值發布 |
-| `xyz.openbmc_project.BIOSConfig.Manager` | BIOS 配置 |
-| `xyz.openbmc_project.State.Host` | Host 狀態監控 |
+| 介面                                     | 用途            |
+| ---------------------------------------- | --------------- |
+| `xyz.openbmc_project.Inventory.Item`     | FRU 資料發布    |
+| `xyz.openbmc_project.Sensor.Value`       | Sensor 數值發布 |
+| `xyz.openbmc_project.BIOSConfig.Manager` | BIOS 配置       |
+| `xyz.openbmc_project.State.Host`         | Host 狀態監控   |
 
 ---
 
@@ -283,9 +283,15 @@ pldm/
 │   ├── request.hpp           # 請求封裝
 │   └── mctp_endpoint_discovery.cpp
 ├── platform-mc/              # Platform MC 實作
-│   ├── terminus.cpp          # Terminus 管理
-│   ├── sensor_manager.cpp    # Sensor 管理
-│   └── event_manager.cpp     # 事件管理
+│   ├── manager.cpp/hpp       # 頂層 Manager (整合所有子系統)
+│   ├── terminus.cpp/hpp      # Terminus 管理與 PDR 解析
+│   ├── terminus_manager.cpp/hpp  # Terminus 探索與 TID 管理
+│   ├── platform_manager.cpp/hpp  # PDR/FRU 拉取、Event 配置
+│   ├── sensor_manager.cpp/hpp    # Per-TID Sensor 輪詢
+│   ├── numeric_sensor.cpp/hpp    # 數值型 Sensor D-Bus 物件
+│   ├── event_manager.cpp/hpp     # 事件處理
+│   ├── dbus_impl_fru.cpp/hpp     # FRU D-Bus 介面
+│   └── dbus_to_terminus_effecters.cpp/hpp  # D-Bus → Effecter 映射
 ├── fw-update/                # 韌體更新模組
 ├── host-bmc/                 # Host-BMC 通訊
 ├── softoff/                  # 軟關機功能
@@ -306,4 +312,4 @@ pldm/
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

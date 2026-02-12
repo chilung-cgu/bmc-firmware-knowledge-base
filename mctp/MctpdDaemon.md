@@ -100,7 +100,8 @@ mode = "bus-owner"
 
 # MCTP 協議設定
 [mctp]
-message_timeout_ms = 250
+# 程式碼硬編碼預設 250，出廠配置檔設為 30
+message_timeout_ms = 30
 
 # 可選：指定 UUID（通常自動取得系統 UUID）
 # uuid = "21f0f554-7f7c-4211-9ca1-6d0f000ea9e7"
@@ -109,6 +110,7 @@ message_timeout_ms = 250
 [bus-owner]
 dynamic_eid_range = [8, 254]
 max_pool_size = 15
+endpoint_poll_ms = 0
 ```
 
 ### 配置選項說明
@@ -123,7 +125,7 @@ max_pool_size = 15
 
 | 選項 | 類型 | 預設值 | 說明 |
 |------|------|--------|------|
-| `message_timeout_ms` | integer | 250 | MCTP 訊息逾時（毫秒） |
+| `message_timeout_ms` | integer | 250（程式碼）/ 30（出廠配置） | MCTP 訊息逾時（毫秒） |
 | `uuid` | string | 系統 UUID | 端點 UUID（RFC 4122 格式） |
 
 #### [bus-owner] 區段
@@ -132,6 +134,7 @@ max_pool_size = 15
 |------|------|--------|------|
 | `dynamic_eid_range` | array | `[8, 254]` | 動態 EID 分配範圍 |
 | `max_pool_size` | integer | 15 | 橋接器最大 EID 池大小 |
+| `endpoint_poll_ms` | integer | 0（禁用） | 橋接下游端點輪詢間隔（ms，有效範圍 2500-10000） |
 
 ---
 

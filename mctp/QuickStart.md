@@ -85,11 +85,13 @@ sudo cp conf/mctpd.conf /etc/mctpd.conf
 mode = "bus-owner"
 
 [mctp]
-message_timeout_ms = 250
+# 程式碼預設 250ms，出廠配置檔設為 30ms
+message_timeout_ms = 30
 
 [bus-owner]
 dynamic_eid_range = [8, 254]
 max_pool_size = 15
+endpoint_poll_ms = 0
 ```
 
 ### 2. 設定本地 MCTP 堆疊

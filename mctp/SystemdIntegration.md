@@ -86,12 +86,12 @@ graph TD
 
 ### 啟動階段
 
-1. **mctp-local-setup.service**（可選）
+1. **mctp-local-setup.service**（可選，由平台提供）
    - 設定本地 MCTP 介面
    - 分配本地 EID
    - 設定 bus-owner 地址
 
-2. **mctp-local.target**
+2. **mctp-local.target**（專案已附帶於 `conf/mctp-local.target`）
    - 表示本地 MCTP 堆疊已配置
 
 3. **mctpd.service**
@@ -105,7 +105,10 @@ graph TD
 
 ## 本地設定服務
 
-雖然不包含在專案中，但通常需要一個設定腳本：
+雖然 mctp-local-setup.service 不包含在專案中，但通常需要一個平台特定的設定腳本：
+
+> [!NOTE]
+> `mctp-local.target` 已包含在專案的 `conf/` 目錄中，但 `mctp-local-setup.service` 需要由各平台自行提供。
 
 ### mctp-local-setup.service 範例
 
@@ -247,20 +250,21 @@ mctpd 使用 `Type=dbus`，表示：
 如果需要額外的 D-Bus 政策：
 
 ```xml
-<!-- /etc/dbus-1/system.d/mctpd.conf -->
-<!DOCTYPE busconfig PUBLIC
-  "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
-  "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<!-- conf/mctpd-dbus.conf -->
+<?xml version="1.0"?> <!--*-nxml-*-->
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+        "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
 <busconfig>
-  <policy user="root">
-    <allow own="au.com.codeconstruct.MCTP1"/>
-    <allow send_destination="au.com.codeconstruct.MCTP1"/>
-  </policy>
-  <policy context="default">
-    <allow send_destination="au.com.codeconstruct.MCTP1"/>
-  </policy>
+ <policy user="root">
+  <allow own="au.com.codeconstruct.MCTP1"/>
+  <allow send_destination="au.com.codeconstruct.MCTP1"/>
+  <allow receive_sender="au.com.codeconstruct.MCTP1"/>
+ </policy>
 </busconfig>
 ```
+
+> [!NOTE]
+> 此檔案已包含在專案的 `conf/mctpd-dbus.conf` 中，可安裝至 `/etc/dbus-1/system.d/`。
 
 ---
 

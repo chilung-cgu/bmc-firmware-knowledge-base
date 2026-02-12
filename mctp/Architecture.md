@@ -130,8 +130,9 @@
 │  │              Configuration (mctpd.conf)                  │ │
 │  │                                                          │ │
 │  │  mode = "bus-owner" | "endpoint"                         │ │
-│  │  [mctp] message_timeout_ms = 250                         │ │
+│  │  [mctp] message_timeout_ms = 30                          │ │
 │  │  [bus-owner] dynamic_eid_range = [8, 254]                │ │
+│  │  [bus-owner] endpoint_poll_ms = 0                        │ │
 │  └──────────────────────────────────────────────────────────┘ │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
@@ -300,10 +301,15 @@ struct net {
 mctp/
 ├── src/
 │   ├── mctp.c              # mctp 命令行工具主程式
+│   ├── mctp.h              # mctp 工具公共標頭
 │   ├── mctpd.c             # mctpd 守護程式主程式
 │   ├── mctp-netlink.c      # Netlink 通訊層
+│   ├── mctp-netlink.h      # Netlink 通訊層標頭
 │   ├── mctp-util.c         # 通用工具函式
-│   ├── mctp-ops.c          # 網路操作（生產環境）
+│   ├── mctp-util.h         # 工具函式標頭
+│   ├── mctp-ops.c          # SD event 操作抽象層
+│   ├── mctp-ops.h          # 操作抽象層標頭
+│   ├── mctp-control-spec.h # MCTP 控制協議規範定義
 │   ├── mctp-req.c          # 測試工具：發送請求
 │   ├── mctp-echo.c         # 測試工具：回應伺服器
 │   ├── mctp-bench.c        # 效能測試工具
@@ -311,13 +317,25 @@ mctp/
 ├── conf/
 │   ├── mctpd.conf          # mctpd 配置範例
 │   ├── mctpd.service       # Systemd 服務定義
-│   └── mctp.target         # Systemd target
+│   ├── mctpd-dbus.conf     # D-Bus 存取控制配置
+│   ├── mctp.target         # Systemd target
+│   └── mctp-local.target   # 本地 MCTP 配置 target
 ├── docs/
-│   └── mctpd.md            # mctpd D-Bus 文件
+│   ├── mctpd.md            # mctpd D-Bus 文件
+│   └── endpoint-recovery.md # 端點恢復機制文件
 ├── tests/
+│   ├── conftest.py         # pytest 配置
 │   ├── test_mctp.py        # mctp 工具測試
-│   ├── test_mctpd.py       # mctpd 測試
-│   └── mctpd/              # mctpd 測試框架
+│   ├── test_mctpd.py       # mctpd 基本測試
+│   ├── test_mctpd_endpoint.py # mctpd 端點測試
+│   ├── mctp_test_utils.py  # 測試工具函式
+│   ├── mctp-ops-test.c     # C 語言操作層測試
+│   ├── test-proto.h        # 測試協議定義
+│   ├── pytest.ini          # pytest 配置
+│   ├── requirements.txt    # Python 相依性
+│   ├── ruff.toml           # Python linter 配置
+│   └── mctpenv/            # mctpd mock 測試環境
+│       └── __init__.py     # 可獨立運行的 mock 環境
 ├── lib/
 │   └── tomlc99/            # TOML 解析器
 ├── meson.build             # Meson 構建配置

@@ -34,6 +34,7 @@ pldm/
 ### pldmd/
 
 PLDM 守護程式主程式，負責：
+
 - 初始化 PLDM 服務
 - 設定 MCTP 傳輸
 - 啟動事件迴圈
@@ -88,29 +89,29 @@ classDiagram
         +registerHandlers()
         +handle(Request) Response
     }
-    
+
     class BaseHandler {
         +getPLDMTypes()
         +getPLDMVersion()
         +getTID()
     }
-    
+
     class BIOSHandler {
         +getBIOSTable()
         +setBIOSAttributeCurrentValue()
     }
-    
+
     class FRUHandler {
         +getFRURecordTableMetadata()
         +getFRURecordTable()
     }
-    
+
     class PlatformHandler {
         +getPDR()
         +getSensorReading()
         +setEffecterStates()
     }
-    
+
     Handler <|-- BaseHandler
     Handler <|-- BIOSHandler
     Handler <|-- FRUHandler
@@ -180,35 +181,45 @@ classDiagram
         -TerminusManager terminusManager
         -PlatformManager platformManager
         -SensorManager sensorManager
+        -EventManager eventManager
         +init()
     }
-    
+
     class TerminusManager {
         -map~tid, Terminus~ termini
-        +discover()
+        +discoverMctpTerminus()
         +getTerminus(tid)
     }
-    
+
     class Terminus {
         -tid: uint8_t
-        -eid: mctp_eid_t
-        -supportedPldmTypes
-        -pdrs: vector~PDR~
+        -supportedTypes: bitset~64~
+        -pdrs: vector
+        -numericSensors: vector
+        +doesSupportType()
+        +doesSupportCommand()
+        +parseTerminusPDRs()
     }
-    
+
     class PlatformManager {
         +getPDRs()
         +initTerminus()
     }
-    
+
     class SensorManager {
-        +startPolling()
-        +getSensorValue()
+        +startPolling(tid)
+        +stopPolling(tid)
     }
-    
+
+    class EventManager {
+        +handlePlatformEvent()
+        +pollForPlatformEventTask()
+    }
+
     Manager --> TerminusManager
     Manager --> PlatformManager
     Manager --> SensorManager
+    Manager --> EventManager
     TerminusManager --> Terminus
 ```
 
@@ -311,13 +322,13 @@ pldmtool/
 
 ## 命名慣例
 
-| 類型 | 慣例 | 範例 |
-|------|------|------|
-| 檔案 | 小寫底線 | `pdr_utils.cpp` |
-| 類別 | PascalCase | `TerminusManager` |
-| 函式 | camelCase | `getSensorReading()` |
-| 常數 | UPPER_SNAKE | `PLDM_SUCCESS` |
-| 命名空間 | 小寫 | `pldm::responder` |
+| 類型     | 慣例        | 範例                 |
+| -------- | ----------- | -------------------- |
+| 檔案     | 小寫底線    | `pdr_utils.cpp`      |
+| 類別     | PascalCase  | `TerminusManager`    |
+| 函式     | camelCase   | `getSensorReading()` |
+| 常數     | UPPER_SNAKE | `PLDM_SUCCESS`       |
+| 命名空間 | 小寫        | `pldm::responder`    |
 
 ---
 
@@ -328,4 +339,4 @@ pldmtool/
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

@@ -6,11 +6,11 @@ pldmtool 是用於測試和診斷 PLDM 功能的命令列工具。
 
 ## 概述
 
-| 項目 | 說明 |
-|------|------|
+| 項目       | 說明                |
+| ---------- | ------------------- |
 | **執行檔** | `/usr/bin/pldmtool` |
-| **語言** | C++ |
-| **輸出** | JSON 格式 |
+| **語言**   | C++                 |
+| **輸出**   | JSON 格式           |
 
 ---
 
@@ -116,14 +116,16 @@ $ pldmtool base GetPLDMTypes -m 20
 
 ## 原始碼
 
-| 檔案 | 說明 |
-|------|------|
-| `pldmtool/pldmtool.cpp` | 主程式 |
-| `pldmtool/pldm_base_cmd.cpp` | Base 命令 |
-| `pldmtool/pldm_platform_cmd.cpp` | Platform 命令 |
-| `pldmtool/pldm_bios_cmd.cpp` | BIOS 命令 |
-| `pldmtool/pldm_fru_cmd.cpp` | FRU 命令 |
+| 檔案                               | 說明           |
+| ---------------------------------- | -------------- |
+| `pldmtool/pldmtool.cpp`            | 主程式         |
+| `pldmtool/pldm_cmd_helper.cpp/hpp` | 命令輔助函式   |
+| `pldmtool/pldm_base_cmd.cpp`       | Base 命令      |
+| `pldmtool/pldm_platform_cmd.cpp`   | Platform 命令  |
+| `pldmtool/pldm_bios_cmd.cpp`       | BIOS 命令      |
+| `pldmtool/pldm_fru_cmd.cpp`        | FRU 命令       |
+| `pldmtool/pldm_fw_update_cmd.cpp`  | FW Update 命令 |
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

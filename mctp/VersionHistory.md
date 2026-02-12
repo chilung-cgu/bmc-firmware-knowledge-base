@@ -16,6 +16,24 @@
 
 ---
 
+## Unreleased（v2.4 之後）
+
+### 新增
+
+- **Bridged endpoint polling**：Bus-owner 可定期輪詢橋接器下游端點，確認端點可達性
+  - 新增 `endpoint_poll_ms` 配置項（`[bus-owner]` 區段），有效範圍 2500-10000ms
+  - 設為 0 時禁用（預設）
+  - 符合 DSP0236 第 8.17.6 節的 EID 回收機制
+
+- **Endpoint recovery 機制**：端點失聯後的自動恢復流程
+  - 新增 `docs/endpoint-recovery.md` 文件
+
+### 變更
+
+- `conf/mctpd.conf` 新增 `endpoint_poll_ms = 0` 預設值
+
+---
+
 ## v2.4 (2025-10-28)
 
 ### 新增
