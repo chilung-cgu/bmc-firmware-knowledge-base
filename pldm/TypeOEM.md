@@ -146,6 +146,35 @@ public:
 
 ---
 
+## 各廠商 OEM 實作對比
+
+| 功能 | IBM | NVIDIA | Ampere | Meta |
+|------|-----|--------|--------|------|
+| OEM Platform Handler | ✅ 完整 | ✅ 事件處理 | ✅ | ✅ |
+| OEM FRU Handler | ✅ | - | - | - |
+| OEM BIOS Handler | ✅ | - | - | - |
+| OEM Utils Handler | ✅ | - | - | - |
+| File I/O (Type 63) | ✅ | - | - | - |
+| pldmtool 子命令 | ✅ `oem-ibm` | - | - | - |
+| OEM PDR | ✅ | - | ✅ | - |
+| Legacy CPER 事件 | - | ✅ (0xFA) | - | - |
+| Lamp Test | ✅ | - | - | - |
+
+### NVIDIA OEM 重點
+
+| 項目 | 說明 |
+|------|------|
+| **位置** | `oem/nvidia/oem_nvidia.hpp` |
+| **核心功能** | Legacy CPER 事件向後相容 |
+| **Event Class** | `0xFA`（NVIDIA 自定義，早於 DSP0248 v1.3.0） |
+| **標準 Event Class** | `0x07`（DSP0248 v1.3.0 標準化的 `PLDM_CPER_EVENT`） |
+| **處理方式** | 同時註冊 `registerEventHandlers` 和 `registerPolledEventHandler` |
+| **CPER** | Common Platform Error Record（UEFI 標準錯誤記錄格式） |
+
+> **面試重點**：NVIDIA 的 PLDM OEM 擴充相對精簡，主要處理 CPER 事件的向後相容。這表明 NVIDIA 儘量遵循 DMTF 標準，只在必要時才使用 OEM 擴充。
+
+---
+
 ## pldmtool OEM 命令
 
 ```bash
@@ -161,8 +190,12 @@ $ pldmtool oem-ibm -h
 ## 建置 OEM 支援
 
 ```bash
-# 啟用 IBM OEM 支援
-meson setup build -Doem-ibm=enabled
+# 啟用 NVIDIA OEM
+meson setup build -Doem-nvidia=enabled
+
+# 僅 NVIDIA（停用其他）
+meson setup build -Doem-ibm=disabled -Doem-ampere=disabled \
+    -Doem-meta=disabled -Doem-nvidia=enabled
 
 # 建置
 meson compile -C build

@@ -1,0 +1,8 @@
+zephyrproject/
+openbmc_kernel_dev_guide/
+linux_subsystem_doc/
+effective-modern-cpp/
+.lingma/
+.vscode/
+.DS_Store
+*.log

@@ -294,7 +294,7 @@ sequenceDiagram
 {
   "entries": [
     {
-      "type": 11,
+      "type": 14,
       "instance": 0,
       "container_id": 1,
       "entity_type": 45,

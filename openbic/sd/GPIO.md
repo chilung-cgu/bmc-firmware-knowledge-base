@@ -360,7 +360,7 @@ void init_retimer_type()
 
 - [AST1030Overview](AST1030Overview.md) - 晶片概述
 - [InterruptHandling](InterruptHandling.md) - 中斷處理詳解
-- [PowerManagement](PowerManagement.md) - 電源狀態管理
+- [PowerManagement](../../README.md) - 電源狀態管理
 
 ---
 

@@ -97,7 +97,7 @@ struct sockaddr_mctp addr = {
 
 char msg[] = { /* PLDM message data */ };
 
-sendto(sock, msg, sizeof(msg), 0, 
+sendto(sock, msg, sizeof(msg), 0,
        (struct sockaddr *)&addr, sizeof(addr));
 ```
 
@@ -223,7 +223,7 @@ mctp neigh del 10 dev mctpi2c1
 ```dts
 &i2c6 {
     status = "okay";
-    
+
     mctp@10 {
         compatible = "mctp-i2c-controller";
         reg = <(0x10 | I2C_OWN_SLAVE_ADDRESS)>;
@@ -275,9 +275,9 @@ CONFIG_I2C_SLAVE=y                 # I2C slave 模式
 struct mctp_dev {
     struct net_device *dev;        // 底層網路裝置
     unsigned int net;              // MCTP 網路 ID
-    
+
     struct mctp_neigh *neigh;      // 鄰居快取
-    
+
     /* 本地 EID 列表 */
     struct list_head local_eids;
 };
@@ -308,6 +308,90 @@ struct mctp_neigh {
 };
 ```
 
+## 雙向關聯設計說明
+
+`mctp_dev` 與 `mctp_neigh` 之間採用雙向指標關聯設計，這是 Linux 核心中常見的最佳化模式：
+
+### 設計架構
+
+```c
+// mctp_dev 指向鄰居表
+struct mctp_dev {
+    struct mctp_neigh *neigh;      // 指向鄰居雜湊表
+};
+
+// mctp_neigh 指向所屬裝置
+struct mctp_neigh {
+    struct mctp_dev *dev;          // 指向父裝置
+};
+```
+
+### 主要設計目的
+
+#### 1. 效率優化
+
+```c
+// 不用每次都遍歷所有裝置找隸屬關係
+struct mctp_dev *parent_dev = neighbor->dev;  // O(1) 操作
+```
+
+#### 2. 資源管理
+
+```c
+// 清理時可以追溯完整關係鏈
+void cleanup_neighbor(struct mctp_neigh *neigh) {
+    struct mctp_dev *dev = neigh->dev;
+    // 移除從裝置的鄰居表
+    remove_from_neighbor_table(dev->neigh, neigh);
+    // 釋放鄰居資源
+    kfree(neigh);
+}
+```
+
+#### 3. 狀態同步
+
+```c
+// 當裝置狀態改變時，可以通知所有相關鄰居
+void device_state_changed(struct mctp_dev *dev, int new_state) {
+    // 遍歷該裝置的所有鄰居並更新狀態
+    foreach_neighbor_in_table(dev->neigh, update_neighbor_state);
+}
+```
+
+### 實際使用場景
+
+#### 封包傳送流程
+
+```
+Application → MCTP Core → [mctp_dev] → [mctp_neigh] → Hardware
+```
+
+#### 封包接收流程
+
+```
+Hardware → [mctp_neigh] → [mctp_dev] → MCTP Core → Application
+```
+
+### 記憶體佈局示意
+
+```
+Memory Layout:
+┌─────────────────┐    ┌──────────────────┐
+│   mctp_dev      │◄──►│   mctp_neigh     │
+├─────────────────┤    ├──────────────────┤
+│ dev: mctpi2c1   │    │ dev: ────────────┘ (反向指標)
+│ neigh: ────────┐│    │ eid: 12
+└─────────────────┘│    │ hwaddr: 0x1d
+                   │    └──────────────────┘
+                   ▼
+            ┌──────────────────┐
+            │ neighbor hash    │
+            │ table            │
+            └──────────────────┘
+```
+
+這種雙向連結設計在作業系統核心中很常見，目的是為了在複雜的網路堆疊中提供高效的資料查找和狀態管理能力。
+
 ---
 
 ## sysfs 介面
@@ -335,13 +419,13 @@ cat /proc/net/mctp
 
 ## 核心版本歷史
 
-| 版本 | 新增功能 |
-|------|----------|
+| 版本 | 新增功能                                   |
+| ---- | ------------------------------------------ |
 | 5.15 | 初始 MCTP 支援（AF_MCTP socket、基礎路由） |
-| 5.16 | mctp-i2c 驅動程式 |
-| 5.17 | 改進的錯誤處理 |
-| 5.18 | 多網路支援改進 |
-| 6.0+ | 持續改進和錯誤修復 |
+| 5.16 | mctp-i2c 驅動程式                          |
+| 5.17 | 改進的錯誤處理                             |
+| 5.18 | 多網路支援改進                             |
+| 6.0+ | 持續改進和錯誤修復                         |
 
 ---
 
@@ -402,14 +486,14 @@ int main() {
     char request[] = {0x00, 0x80, 0x02};  // Get Endpoint ID
     char response[256];
     socklen_t addrlen;
-    
+
     // 建立 socket
     sock = socket(AF_MCTP, SOCK_DGRAM, 0);
     if (sock < 0) {
         perror("socket");
         return 1;
     }
-    
+
     // 設定目標地址
     memset(&addr, 0, sizeof(addr));
     addr.smctp_family = AF_MCTP;
@@ -417,14 +501,14 @@ int main() {
     addr.smctp_addr.s_addr = 10;  // 目標 EID
     addr.smctp_type = MCTP_TYPE_CONTROL;
     addr.smctp_tag = MCTP_TAG_OWNER;
-    
+
     // 發送請求
     if (sendto(sock, request, sizeof(request), 0,
                (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("sendto");
         return 1;
     }
-    
+
     // 接收回應
     addrlen = sizeof(addr);
     ssize_t len = recvfrom(sock, response, sizeof(response), 0,
@@ -433,10 +517,10 @@ int main() {
         perror("recvfrom");
         return 1;
     }
-    
-    printf("Received %zd bytes from EID %d\n", 
+
+    printf("Received %zd bytes from EID %d\n",
            len, addr.smctp_addr.s_addr);
-    
+
     return 0;
 }
 ```

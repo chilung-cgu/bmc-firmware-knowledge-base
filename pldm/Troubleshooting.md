@@ -1,86 +1,215 @@
-# 故障排除
+# Troubleshooting 故障排除
 
-本文件提供 PLDM 常見問題的診斷與解決方案。
+本文件提供 PLDM 常見問題的診斷方法、工具使用指引、以及解決方案。
 
 ---
 
 ## 診斷工具
 
-### pldmtool
+### 1. pldmtool — PLDM 命令測試
 
 ```bash
-# 確認 PLDM 服務回應
-pldmtool base GetTID
+# 確認 pldmd 是否正常運行
+$ pldmtool base GetTID
+{ "TID": 1 }
 
-# 查詢支援的 Types
-pldmtool base GetPLDMTypes
+# 確認支援的 PLDM Types
+$ pldmtool base GetPLDMTypes
 
-# 取得所有 PDR
-pldmtool platform GetPDR -a
+# 遍歷 PDR Repository
+$ pldmtool platform GetPDR -d 0
+
+# 指定遠端端點
+$ pldmtool base GetTID -m 8
+
+# 發送原始 PLDM 命令
+$ pldmtool raw -d 0x80 0x00 0x02
 ```
 
-### journalctl
+### 2. Flight Recorder — PLDM 訊息記錄
+
+```bash
+# 確認是否啟用（編譯時設定）
+# meson.options: flightrecorder-max-entries > 0
+
+# 傾印紀錄到 /tmp/pldm_flight_recorder
+$ kill -SIGUSR1 $(pidof pldmd)
+
+# 檢視紀錄
+$ cat /tmp/pldm_flight_recorder
+# 格式：<timestamp> : Tx/Rx : <hex bytes>
+```
+
+### 3. Journal 日誌
 
 ```bash
 # 查看 pldmd 日誌
-journalctl -u pldmd -f
+$ journalctl -u pldmd -f
 
-# 詳細日誌
-journalctl -u pldmd --no-pager | tail -100
+# 啟用詳細模式
+$ systemctl stop pldmd
+$ pldmd --verbose
+# 或設定 service 環境變數
+```
+
+### 4. D-Bus 診斷
+
+```bash
+# 確認 pldmd 是否在 D-Bus 上
+$ busctl list | grep pldm
+
+# 查看 PDR 介面
+$ busctl introspect xyz.openbmc_project.PLDM /xyz/openbmc_project/pldm
+
+# 查詢 State Effecter PDR
+$ busctl call xyz.openbmc_project.PLDM \
+    /xyz/openbmc_project/pldm \
+    xyz.openbmc_project.PLDM.PDR \
+    FindStateEffecterPDR yqq <tid> <entityId> <stateSetId>
 ```
 
 ---
 
 ## 常見問題
 
-### 問題 1: pldmd 無法啟動
+### 問題 1：pldmd 啟動失敗
 
-**症狀**: `systemctl status pldmd` 顯示 failed
+**症狀**：`systemctl status pldmd` 顯示 failed
 
-**檢查步驟**:
-1. 確認 MCTP 服務正常: `systemctl status mctpd`
-2. 檢查日誌: `journalctl -u pldmd`
-3. 確認配置檔案存在
-
-### 問題 2: GetPDR 回傳空
-
-**可能原因**:
-- PDR JSON 配置錯誤
-- Host 尚未 Ready
-- Entity Manager 未發布 Inventory
-
-**檢查步驟**:
-1. 確認 JSON 語法正確
-2. 檢查 Host 狀態
-3. 確認 D-Bus 物件存在
-
-### 問題 3: BIOS 屬性未顯示
-
-**檢查步驟**:
-1. 確認 BIOS JSON 路徑正確
-2. 檢查系統類型是否匹配
-3. 確認 bios-settings-mgr 執行中
-
+**診斷**：
 ```bash
-busctl tree xyz.openbmc_project.BIOSConfigManager
+$ journalctl -u pldmd --no-pager -n 50
+```
+
+**常見原因**：
+
+| 原因 | 解決方案 |
+|------|---------|
+| Transport 初始化失敗 | 確認 `af-mctp` kernel module 已載入，或 `mctp-demux` daemon 正在運行 |
+| D-Bus 連線失敗 | 確認 `dbus-daemon` 正常運行 |
+| Instance ID DB 錯誤 | 刪除 `/var/lib/pldm/` 下的 instance ID 資料庫 |
+
+### 問題 2：Host 端點不回應
+
+**症狀**：`pldmtool base GetTID -m <eid>` 超時
+
+**診斷步驟**：
+
+1. **確認 MCTP 連通性**
+   ```bash
+   $ mctp link
+   $ mctp address
+   $ mctp route
+   ```
+
+2. **確認端點已被發現**
+   ```bash
+   $ busctl tree au.com.codeconstruct.MCTP1
+   ```
+
+3. **確認 PLDM 支援**
+   ```bash
+   # 端點的 MCTP Message Types 是否包含 1（PLDM）
+   $ busctl get-property au.com.codeconstruct.MCTP1 \
+       /au/com/codeconstruct/mctp1/networks/1/endpoints/<eid> \
+       xyz.openbmc_project.MCTP.Endpoint MessageTypes
+   ```
+
+4. **檢查 Timing**
+   - `response-time-out`（預設 2000ms）是否足夠？
+   - 端點是否在 Instance ID 過期前（6 秒）回應？
+
+### 問題 3：PDR 資料不正確
+
+**症狀**：Sensor/Effecter 數值異常或缺失
+
+**診斷**：
+```bash
+# 遍歷所有 PDR 確認資料
+$ pldmtool platform GetPDR -d 0
+# 比對 Handle 0 → nextHandle → ... → 0xFFFF
+
+# 確認 PDR JSON 配置
+$ ls /usr/share/pldm/pdr/
+```
+
+### 問題 4：Firmware Update 失敗
+
+**症狀**：FW Update 卡在某個狀態
+
+**診斷**：
+```bash
+# 查看 FW Update 日誌
+$ journalctl -u pldmd | grep -i "fw\|firmware\|update"
+
+# 確認 FD 探索是否成功
+$ journalctl -u pldmd | grep "QueryDeviceIdentifiers\|GetFirmwareParameters"
+
+# 確認 D-Bus 上的 Software 物件
+$ busctl tree xyz.openbmc_project.PLDM | grep software
+```
+
+### 問題 5：SoftOff 超時
+
+**症狀**：`pldm-softpoweroff` 超時未完成
+
+**診斷**：
+```bash
+$ journalctl -u pldm-softpoweroff --no-pager
+
+# 確認 Host 狀態
+$ busctl get-property xyz.openbmc_project.State.Host \
+    /xyz/openbmc_project/state/host0 \
+    xyz.openbmc_project.State.Host CurrentHostState
+```
+
+**常見原因**：
+- Host 未回報 `GracefulShutdownRequested` Sensor 狀態變更
+- Effecter ID 在 PDR 中找不到
+- `softoff-timeout-seconds`（預設 7200 秒）太短
+
+### 問題 6：Instance ID 耗盡
+
+**症狀**：`No free instance ids` 錯誤
+
+**原因**：同時有太多未完成的 PLDM 請求
+
+**解決方案**：
+```bash
+# 重啟 pldmd 釋放所有 Instance ID
+$ systemctl restart pldmd
+
+# 長期：調整 instance-id-expiration-interval
+# 或減少並發請求數
 ```
 
 ---
 
-## 啟用 Verbose 模式
+## Timing 參數調校
 
-```bash
-echo 'PLDMD_ARGS="--verbose"' > /etc/default/pldmd
-systemctl restart pldmd
-journalctl -u pldmd -f
+```mermaid
+graph LR
+    Send["發送請求"] --> Wait["等待回應<br/>response-time-out<br/>(預設 2s)"]
+    Wait -->|"超時"| Retry["重試<br/>number-of-request-retries<br/>(預設 2次)"]
+    Retry -->|"超時"| Retry
+    Retry -->|"重試耗盡"| Expire["Instance ID 過期<br/>instance-id-expiration-interval<br/>(預設 5s)"]
+    Expire --> Callback["呼叫 callback(nullptr, 0)"]
+
+    Wait -->|"收到回應"| Done["完成"]
 ```
+
+**調校建議**：
+- 總等待時間 = `response-time-out` × (`number-of-request-retries` + 1)
+- 總等待時間 **必須** ≤ `instance-id-expiration-interval`
+- DSP0240 規定 Instance ID 最大有效期為 6 秒
 
 ---
 
-## 相關連結
+## 相關文件
 
-- [pldmd 原始碼](https://github.com/openbmc/pldm)
-- [OpenBMC Discord](https://discord.gg/69Km47zH98)
+- [Pldmtool](Pldmtool.md) - 命令列工具
+- [Pldmd](Pldmd.md) - Flight Recorder 詳細說明
+- [Configuration](Configuration.md) - Timing 參數列表
 
 ---
 
