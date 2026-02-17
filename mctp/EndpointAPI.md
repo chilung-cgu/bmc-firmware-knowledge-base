@@ -11,6 +11,7 @@
 ```
 
 **範例**：
+
 - `/au/com/codeconstruct/mctp1/networks/1/endpoints/8`（本機）
 - `/au/com/codeconstruct/mctp1/networks/1/endpoints/10`（遠端）
 
@@ -20,11 +21,11 @@
 
 每個端點物件包含以下介面：
 
-| 介面 | 來源 | 說明 |
-|------|------|------|
-| `xyz.openbmc_project.MCTP.Endpoint` | OpenBMC | MCTP 端點標準資訊 |
-| `xyz.openbmc_project.Common.UUID` | OpenBMC | 端點 UUID |
-| `au.com.codeconstruct.MCTP.Endpoint1` | CodeConstruct | 端點控制方法 |
+| 介面                                  | 來源          | 說明              |
+| ------------------------------------- | ------------- | ----------------- |
+| `xyz.openbmc_project.MCTP.Endpoint`   | OpenBMC       | MCTP 端點標準資訊 |
+| `xyz.openbmc_project.Common.UUID`     | OpenBMC       | 端點 UUID         |
+| `au.com.codeconstruct.MCTP.Endpoint1` | CodeConstruct | 端點控制方法      |
 
 ---
 
@@ -46,11 +47,11 @@ xyz.openbmc_project.MCTP.Endpoint      interface -         -            -
 
 #### EID
 
-| 項目 | 值 |
-|------|-----|
+| 項目     | 值         |
+| -------- | ---------- |
 | **型別** | `y` (byte) |
-| **存取** | 唯讀 |
-| **訊號** | const |
+| **存取** | 唯讀       |
+| **訊號** | const      |
 
 端點識別碼（Endpoint ID）。
 
@@ -65,11 +66,11 @@ y 10
 
 #### NetworkId
 
-| 項目 | 值 |
-|------|-----|
+| 項目     | 值           |
+| -------- | ------------ |
 | **型別** | `u` (uint32) |
-| **存取** | 唯讀 |
-| **訊號** | const |
+| **存取** | 唯讀         |
+| **訊號** | const        |
 
 端點所屬的 MCTP 網路 ID。
 
@@ -84,24 +85,24 @@ u 1
 
 #### SupportedMessageTypes
 
-| 項目 | 值 |
-|------|-----|
+| 項目     | 值                    |
+| -------- | --------------------- |
 | **型別** | `ay` (array of bytes) |
-| **存取** | 唯讀 |
-| **訊號** | const |
+| **存取** | 唯讀                  |
+| **訊號** | const                 |
 
 端點支援的 MCTP 訊息類型列表。
 
 **常見訊息類型**：
 
-| 值 | 類型 |
-|----|------|
+| 值   | 類型         |
+| ---- | ------------ |
 | 0x00 | MCTP Control |
-| 0x01 | PLDM |
-| 0x02 | NC-SI |
-| 0x03 | Ethernet |
-| 0x04 | NVMe-MI |
-| 0x05 | SPDM |
+| 0x01 | PLDM         |
+| 0x02 | NC-SI        |
+| 0x03 | Ethernet     |
+| 0x04 | NVMe-MI      |
+| 0x05 | SPDM         |
 
 **讀取範例**：
 
@@ -113,6 +114,7 @@ ay 2 0 1
 ```
 
 **輸出說明**：
+
 - `ay` - byte array
 - `2` - 陣列長度
 - `0 1` - 支援 Control (0) 和 PLDM (1)
@@ -128,17 +130,17 @@ OpenBMC 定義的 UUID 介面。
 ```
 NAME                                   TYPE      SIGNATURE RESULT/VALUE FLAGS
 xyz.openbmc_project.Common.UUID        interface -         -            -
-.UUID                                  property  s         "..."        emits-change
+.UUID                                  property  s         "..."        const
 ```
 
 ### 屬性
 
 #### UUID
 
-| 項目 | 值 |
-|------|-----|
-| **型別** | `s` (string) |
-| **存取** | 唯讀 |
+| 項目     | 值              |
+| -------- | --------------- |
+| **型別** | `s` (string)    |
+| **存取** | 唯讀            |
 | **訊號** | PropertyChanged |
 
 端點的 UUID，RFC 4122 格式。
@@ -163,6 +165,7 @@ CodeConstruct 定義的端點控制介面。
 ```
 NAME                                   TYPE      SIGNATURE RESULT/VALUE FLAGS
 au.com.codeconstruct.MCTP.Endpoint1    interface -         -            -
+.Recover                               method    -         -            -
 .Remove                                method    -         -            -
 .SetMTU                                method    u         -            -
 .Connectivity                          property  s         "Available"  emits-change
@@ -174,12 +177,13 @@ au.com.codeconstruct.MCTP.Endpoint1    interface -         -            -
 
 設定此端點路由的 MTU（Maximum Transmission Unit）。
 
-| 項目 | 值 |
-|------|-----|
+| 項目     | 值                    |
+| -------- | --------------------- |
 | **輸入** | `u` - MTU 值 (uint32) |
-| **輸出** | 無 |
+| **輸出** | 無                    |
 
 **MTU 範圍**（依傳輸而異）：
+
 - I2C：68-254 bytes
 
 **使用範例**：
@@ -192,6 +196,7 @@ $ busctl call au.com.codeconstruct.MCTP1 \
 ```
 
 **注意**：
+
 - MTU 設定為 0 會使用介面預設 MTU
 - MTU 必須在傳輸允許的範圍內
 
@@ -199,10 +204,10 @@ $ busctl call au.com.codeconstruct.MCTP1 \
 
 移除此端點。會刪除對應的路由和鄰居條目。
 
-| 項目 | 值 |
-|------|-----|
-| **輸入** | 無 |
-| **輸出** | 無 |
+| 項目     | 值  |
+| -------- | --- |
+| **輸入** | 無  |
+| **輸出** | 無  |
 
 **使用範例**：
 
@@ -214,29 +219,48 @@ $ busctl call au.com.codeconstruct.MCTP1 \
 ```
 
 **效果**：
+
 1. 從 mctpd 移除端點記錄
 2. 刪除核心路由條目
 3. 刪除核心鄰居條目
 4. 發出 InterfacesRemoved D-Bus 訊號
 
+#### Recover
+
+觸發端點的恢復流程。當端點處於 Degraded 狀態時，可用此方法主動嘗試恢復連接。
+
+| 項目     | 值  |
+| -------- | --- |
+| **輸入** | 無  |
+| **輸出** | 無  |
+
+**使用範例**：
+
+```bash
+$ busctl call au.com.codeconstruct.MCTP1 \
+    /au/com/codeconstruct/mctp1/networks/1/endpoints/10 \
+    au.com.codeconstruct.MCTP.Endpoint1 \
+    Recover
+```
+
 ### 屬性
 
 #### Connectivity
 
-| 項目 | 值 |
-|------|-----|
-| **型別** | `s` (string) |
+| 項目     | 值                             |
+| -------- | ------------------------------ |
+| **型別** | `s` (string)                   |
 | **存取** | 唯讀（預設）/ 可寫（開發模式） |
-| **訊號** | PropertyChanged |
+| **訊號** | PropertyChanged                |
 
 端點的連接狀態。
 
 **可能的值**：
 
-| 值 | 說明 |
-|----|------|
-| `"Available"` | 端點正常可用 |
-| `"Degraded"` | 端點連接降級（無回應） |
+| 值            | 說明                   |
+| ------------- | ---------------------- |
+| `"Available"` | 端點正常可用           |
+| `"Degraded"`  | 端點連接降級（無回應） |
 
 **讀取範例**：
 
@@ -269,6 +293,7 @@ $ busctl introspect au.com.codeconstruct.MCTP1 \
     /au/com/codeconstruct/mctp1/networks/1/endpoints/10
 NAME                                   TYPE      SIGNATURE RESULT/VALUE             FLAGS
 au.com.codeconstruct.MCTP.Endpoint1    interface -         -                        -
+.Recover                               method    -         -                        -
 .Remove                                method    -         -                        -
 .SetMTU                                method    u         -                        -
 .Connectivity                          property  s         "Available"              emits-change
@@ -283,7 +308,7 @@ org.freedesktop.DBus.Properties        interface -         -                    
 .Set                                   method    ssv       -                        -
 .PropertiesChanged                     signal    sa{sv}as  -                        -
 xyz.openbmc_project.Common.UUID        interface -         -                        -
-.UUID                                  property  s         "12345678-1234-..."      emits-change
+.UUID                                  property  s         "12345678-1234-..."      const
 xyz.openbmc_project.MCTP.Endpoint      interface -         -                        -
 .EID                                   property  y         10                       const
 .NetworkId                             property  u         1                        const
@@ -382,7 +407,7 @@ for path, interfaces in objects.items():
         endpoint = interfaces['xyz.openbmc_project.MCTP.Endpoint']
         eid = endpoint['EID']
         types = endpoint['SupportedMessageTypes']
-        
+
         # 檢查是否支援 PLDM (type 1)
         if 1 in types:
             print(f"PLDM endpoint found: EID {eid}")

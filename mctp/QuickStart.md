@@ -91,7 +91,7 @@ message_timeout_ms = 30
 [bus-owner]
 dynamic_eid_range = [8, 254]
 max_pool_size = 15
-endpoint_poll_ms = 0
+# endpoint_poll_ms 目前在 upstream 中尚未實作
 ```
 
 ### 2. 設定本地 MCTP 堆疊
@@ -135,6 +135,7 @@ busctl call au.com.codeconstruct.MCTP1 \
 ```
 
 **成功輸出**：
+
 ```
 yisb 10 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/10" true
 ```

@@ -70,17 +70,21 @@ int sock = socket(AF_MCTP, SOCK_DGRAM, 0);
 ### sockaddr_mctp 結構
 
 ```c
-struct sockaddr_mctp {
-    unsigned short    smctp_family;   // AF_MCTP
-    __be16           smctp_reserved;  // 保留
-    unsigned int     smctp_network;   // 網路 ID
-    struct mctp_addr smctp_addr;      // EID
-    __u8             smctp_type;      // 訊息類型
-    __u8             smctp_tag;       // 訊息標籤
-};
+// include/uapi/linux/mctp.h (Upstream Kernel)
+typedef __u8 mctp_eid_t;
 
 struct mctp_addr {
-    __u8 s_addr;                      // 8-bit EID
+    mctp_eid_t s_addr;                     // 8-bit EID
+};
+
+struct sockaddr_mctp {
+    __kernel_sa_family_t smctp_family;     // AF_MCTP
+    __u16                __smctp_pad0;     // 填充（padding），不使用
+    unsigned int         smctp_network;    // 網路 ID
+    struct mctp_addr     smctp_addr;       // EID
+    __u8                 smctp_type;       // 訊息類型
+    __u8                 smctp_tag;        // 訊息標籤
+    __u8                 __smctp_pad1;     // 填充（padding），不使用
 };
 ```
 
@@ -266,131 +270,175 @@ CONFIG_I2C_SLAVE=y                 # I2C slave 模式
 
 ---
 
-## 核心資料結構
+## 核心資料結構與設計與範例解析
 
-### MCTP 設備
+這幾個資料結構的設計，主要對應網路通訊中 **「我（主機）」**、**「路（通道）」** 與 **「對方（端點）」** 之間的關係。
+
+為了便於理解，我們使用一個具體情境來對照：**「BMC (EID 8) 要去讀取一張連在 I2C Bus 6 上的溫度感測器 (EID 50, I2C Addr 0x4A)」**。
+
+### 1. `struct mctp_dev` ——「網卡（通道）」
+
+這是 **「物理通道的負責人」**。在上述情境中，它代表 **"I2C Bus 6 控制器"**。
+
+- **功能**：管理物理層的狀態（UP/DOWN）、MTU 大小、以及該通道上的網路 ID。
+- **情境對應**：BMC 可能有多條 I2C bus，每一條都需要一個 `mctp_dev` 來管理。
 
 ```c
-// net/mctp/device.c
+// include/net/mctpdevice.h (Upstream Kernel)
 struct mctp_dev {
-    struct net_device *dev;        // 底層網路裝置
-    unsigned int net;              // MCTP 網路 ID
+    struct net_device     *dev;         // 底層網路裝置 (例如 "mctpi2c6")
 
-    struct mctp_neigh *neigh;      // 鄰居快取
+    refcount_t            refs;         // 引用計數
 
-    /* 本地 EID 列表 */
-    struct list_head local_eids;
+    unsigned int          net;          // MCTP 網路 ID
+    enum mctp_phys_binding binding;    // 物理綁定類型 (I2C/PCIe/Serial 等)
+
+    const struct mctp_netdev_ops *ops; // 裝置操作函數指標
+
+    /* 本地 EID 管理：addrs 是一個動態陣列，
+     * 儲存分配給此裝置的所有本地 EID */
+    u8                    *addrs;       // 本地 EID 陣列
+    size_t                num_addrs;    // 本地 EID 數量
+    spinlock_t            addrs_lock;   // 保護 addrs 的自旋鎖
+
+    struct rcu_head       rcu;          // RCU 保護
 };
 ```
 
-### MCTP 路由
+> **⚠️ 注意**：`mctp_dev` 中**沒有**直接指向 `mctp_neigh` 的指標。鄰居 (`mctp_neigh`) 是被串在 per-net namespace 的全域鄰居列表中（`struct netns_mctp.neighbours`），並透過 `mctp_neigh.dev` 欄位反向關聯到對應的 `mctp_dev`。
+
+### 2. `struct mctp_neigh` ——「鄰居（通訊錄）」
+
+這是 **「住在這條路上的特定住戶」**。在情境中，它代表那個 **"溫度感測器"**。
+
+- **功能**：MCTP EID 是邏輯地址 (EID 50)，但要在 I2C 傳輸，必須知道對方的 **實體地址 (HW Address)**，即 I2C Address (0x4A)。這個結構就是 **「對照表 (ARP Table)」**。
+- **實作細節**：使用 Linux 標準的 `struct list_head` 串接在 per-net namespace 的全域鄰居列表 (`struct netns_mctp.neighbours`) 中。
 
 ```c
-// net/mctp/route.c
+// include/net/mctp.h (Upstream Kernel)
+enum mctp_neigh_source {
+    MCTP_NEIGH_STATIC,       // 靜態設定 (由使用者手動新增)
+    MCTP_NEIGH_DISCOVER,     // 動態發現
+};
+
+struct mctp_neigh {
+    struct mctp_dev          *dev;          // 此鄰居所在的裝置
+    mctp_eid_t               eid;          // 對方的 EID
+    enum mctp_neigh_source   source;       // 來源
+
+    unsigned char            ha[MAX_ADDR_LEN]; // 實體地址 (如 I2C Addr 0x4A)
+
+    struct list_head         list;         // 鏈結串列節點
+    struct rcu_head          rcu;          // RCU 保護
+};
+```
+
+### 3. `struct mctp_route` ——「導航規則」
+
+這是 **「指路牌」**。當 App 說「我要寄信給 EID 50」時，Kernel 透過它知道該走哪條路。
+
+- **功能**：路由表，決定封包該交給哪個 `mctp_dev` 送出。
+- **實作細節**：同樣使用 `struct list_head` 串接在全域路由表 (`net->mctp.routes`) 中。
+
+```c
+// include/net/mctp.h (Upstream Kernel)
 struct mctp_route {
-    mctp_eid_t min, max;           // EID 範圍
-    unsigned int mtu;              // 路由 MTU
-    struct mctp_dev *dev;          // 輸出裝置
-    mctp_eid_t gw;                 // 閘道 EID（如果有）
-    unsigned int type;             // 路由類型
+    mctp_eid_t              min, max;      // EID 範圍
+
+    unsigned char           type;          // 路由類型
+
+    unsigned int            mtu;           // 路徑 MTU
+
+    enum {
+        MCTP_ROUTE_DIRECT,                 // 直接連接
+        MCTP_ROUTE_GATEWAY,                // 透過閘道
+    } dst_type;
+    union {
+        struct mctp_dev     *dev;          // 出口裝置 (Direct)
+        struct mctp_fq_addr gateway;       // 閘道地址 (Gateway)
+    };
+
+    int (*output)(struct mctp_dst *dst,    // 輸出函數指標
+                  struct sk_buff *skb);
+
+    struct list_head        list;          // 鏈結串列節點
+    refcount_t              refs;          // 引用計數
+    struct rcu_head         rcu;           // RCU 保護
 };
 ```
 
-### MCTP 鄰居
+---
 
-```c
-// net/mctp/neigh.c
-struct mctp_neigh {
-    mctp_eid_t eid;                // 端點 EID
-    struct mctp_dev *dev;          // 裝置
-    u8 hwaddr[MAX_ADDR_LEN];       // 實體地址
-    size_t hwaddr_len;             // 地址長度
-};
-```
+---
 
-## 雙向關聯設計說明
+### 資料流動的動態過程
 
-`mctp_dev` 與 `mctp_neigh` 之間採用雙向指標關聯設計，這是 Linux 核心中常見的最佳化模式：
+#### 1. 封包傳送流程 (Tx) - `sendto(EID=50)`
 
-### 設計架構
+當 App 呼叫 `sendto(EID=50)` 時，核心內部的運作流程如下：
 
-```c
-// mctp_dev 指向鄰居表
-struct mctp_dev {
-    struct mctp_neigh *neigh;      // 指向鄰居雜湊表
-};
+1.  **查路由 (`mctp_route`)**：
+    - Kernel: "有人要寄給 EID 50，該走哪？"
+    - 查表：在 `net->mctp.routes` 串列中遍歷，找到吻合的 `mctp_route`。
+    - 決策：交給 **I2C Bus 6 (`mctp_dev`)**。
 
-// mctp_neigh 指向所屬裝置
-struct mctp_neigh {
-    struct mctp_dev *dev;          // 指向父裝置
-};
-```
+2.  **查鄰居 (`mctp_neigh`)**：
+    - Driver (I2C Bus 6): "我要送給 EID 50，但 I2C 暫存器要填哪個 Slave Address？"
+    - 查表：透過 `mctp_neigh_lookup()` 函數（遍歷 `netns_mctp.neighbours` 串列）找到 EID=50 的 `mctp_neigh`。
+    - 結果：找到 `mctp_neigh { eid=50, ha=0x4A }`。
+    - 決策：硬體傳輸目標設為 **0x4A**。
 
-### 主要設計目的
+3.  **實際發送 (`mctp_dev` -> Hardware)**：
+    - Kernel 操作 I2C 控制器硬體，發出訊號：`[Start] [Addr: 0x4A] [Data...] [Stop]`。
 
-#### 1. 效率優化
+#### 2. 封包接收流程 (Rx)
 
-```c
-// 不用每次都遍歷所有裝置找隸屬關係
-struct mctp_dev *parent_dev = neighbor->dev;  // O(1) 操作
-```
+當感測器回傳資料時，流程是反過來的：
 
-#### 2. 資源管理
+1.  **硬體接收**：I2C Controller 收到數據。
+2.  **建立鄰居關聯**：Driver 透過來源 I2C Address (0x4A) 查找或建立 `mctp_neigh`。
+3.  **上層傳遞**：封包透過 `mctp_dev` 往上層核心協議堆疊送。
+4.  **Socket 接收**：App 透過 `recvfrom` 收到資料。
 
-```c
-// 清理時可以追溯完整關係鏈
-void cleanup_neighbor(struct mctp_neigh *neigh) {
-    struct mctp_dev *dev = neigh->dev;
-    // 移除從裝置的鄰居表
-    remove_from_neighbor_table(dev->neigh, neigh);
-    // 釋放鄰居資源
-    kfree(neigh);
-}
-```
+---
 
-#### 3. 狀態同步
+### 資料結構關聯說明
 
-```c
-// 當裝置狀態改變時，可以通知所有相關鄰居
-void device_state_changed(struct mctp_dev *dev, int new_state) {
-    // 遍歷該裝置的所有鄰居並更新狀態
-    foreach_neighbor_in_table(dev->neigh, update_neighbor_state);
-}
-```
+`mctp_dev`、`mctp_neigh`、`mctp_route` 三者的關聯如下：
 
-### 實際使用場景
+- **`mctp_neigh` → `mctp_dev`**：每個 `mctp_neigh` 透過 `dev` 欄位指向它所屬的 `mctp_dev`。
+- **`mctp_route` → `mctp_dev`**：Direct 路由透過 `dev` 欄位指向出口裝置。
+- **`mctp_dev` → `mctp_neigh`**：`mctp_dev` **沒有**直接指標指向 `mctp_neigh`。鄰居列表存放在 per-net namespace 的 `netns_mctp.neighbours`，需要查詢時透過 `mctp_neigh_lookup()` 遍歷全域列表並比對 `mctp_neigh.dev` 欄位。
+- **`mctp_route` 和 `mctp_neigh` 的列表**：都使用 `struct list_head` 串接，分別存放在 `netns_mctp.routes` 和 `netns_mctp.neighbours` 中。
 
-#### 封包傳送流程
+> 關於 `struct list_head` 的詳細說明，請參考 [Linux Kernel Linked List](../linux-kernel-syntax/LinkedList.md)。
+
+### 記憶體佈局示意圖
 
 ```
-Application → MCTP Core → [mctp_dev] → [mctp_neigh] → Hardware
+                        struct netns_mctp (per-net namespace)
+                    ┌─────────────────────────────────────────────┐
+                    │  routes (list_head)                          │
+                    │   └─ mctp_route ─── mctp_route ─── ...      │
+                    │                                              │
+                    │  neighbours (list_head)                      │
+                    │   └─ mctp_neigh ── mctp_neigh ── ...        │
+                    └─────────────────────────────────────────────┘
+                               │                │
+                               │ (.dev)         │ (.dev)
+                               ▼                ▼
+                    ┌──────────────────┐  ┌──────────────────┐
+                    │ mctp_dev (Bus 6) │  │ mctp_dev (Bus 7) │
+                    │  .net = 1        │  │  .net = 2        │
+                    │  .addrs = [8]    │  │  .addrs = [9]    │
+                    └──────────────────┘  └──────────────────┘
 ```
 
-#### 封包接收流程
+**總結：**
 
-```
-Hardware → [mctp_neigh] → [mctp_dev] → MCTP Core → Application
-```
-
-### 記憶體佈局示意
-
-```
-Memory Layout:
-┌─────────────────┐    ┌──────────────────┐
-│   mctp_dev      │◄──►│   mctp_neigh     │
-├─────────────────┤    ├──────────────────┤
-│ dev: mctpi2c1   │    │ dev: ────────────┘ (反向指標)
-│ neigh: ────────┐│    │ eid: 12
-└─────────────────┘│    │ hwaddr: 0x1d
-                   │    └──────────────────┘
-                   ▼
-            ┌──────────────────┐
-            │ neighbor hash    │
-            │ table            │
-            └──────────────────┘
-```
-
-這種雙向連結設計在作業系統核心中很常見，目的是為了在複雜的網路堆疊中提供高效的資料查找和狀態管理能力。
+- `mctp_dev` = **硬體介面** (I2C Controller)
+- `mctp_route` = **地圖** (Routing Table，用 `list_head` 串在 `netns_mctp.routes`)
+- `mctp_neigh` = **電話簿** (ARP Table: EID → HW Addr，用 `list_head` 串在 `netns_mctp.neighbours`)
 
 ---
 

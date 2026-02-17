@@ -80,12 +80,12 @@
 
 `mctp` 是一個輕量級的命令行工具，用於管理 Linux 核心 MCTP 堆疊的狀態：
 
-| 子命令 | 功能 |
-|--------|------|
-| `mctp link` | 管理 MCTP 網路介面（啟用/停用、設定 MTU、網路 ID） |
-| `mctp address` | 管理本地 EID 地址 |
-| `mctp route` | 管理 MCTP 路由表 |
-| `mctp neigh` | 管理鄰居表（EID 到實體地址映射） |
+| 子命令         | 功能                                               |
+| -------------- | -------------------------------------------------- |
+| `mctp link`    | 管理 MCTP 網路介面（啟用/停用、設定 MTU、網路 ID） |
+| `mctp address` | 管理本地 EID 地址                                  |
+| `mctp route`   | 管理 MCTP 路由表                                   |
+| `mctp neigh`   | 管理鄰居表（EID 到實體地址映射）                   |
 
 **實作檔案**：`src/mctp.c`
 
@@ -158,14 +158,14 @@ sequenceDiagram
     Kernel->>Device: MCTP Control Message
     Device-->>Kernel: Response (EID)
     Kernel-->>mctpd: Response
-    
+
     alt Device has no EID
         mctpd->>Kernel: Send Set Endpoint ID
         Kernel->>Device: MCTP Control Message
         Device-->>Kernel: Response
         Kernel-->>mctpd: Response
     end
-    
+
     mctpd->>mctpd: Create D-Bus Object
     mctpd->>Kernel: Add Route & Neigh Entry
     mctpd-->>Client: (eid, net, path, new)
@@ -186,7 +186,7 @@ sequenceDiagram
     Stack->>Stack: Lookup Route/Neigh
     Stack->>Driver: Transmit Packet
     Driver->>HW: Physical Transfer
-    
+
     HW-->>Driver: Receive Packet
     Driver-->>Stack: Deliver Packet
     Stack-->>Stack: Reassemble if needed
@@ -200,57 +200,110 @@ sequenceDiagram
 
 ### mctpd 內部結構
 
+> 以下結構定義取自 `src/mctpd.c` (upstream)，完整列出所有欄位。
+
 ```c
+// src/mctpd.c (Upstream)
+
+struct dest_phys {
+    int ifindex;                    // 網路介面索引
+    uint8_t hwaddr[MAX_ADDR_LEN];  // 硬體地址
+    size_t hwaddr_len;             // 硬體地址長度
+};
+
 // 全域上下文
 struct ctx {
-    sd_event *event;          // systemd 事件迴圈
-    sd_bus *bus;              // D-Bus 連線
-    mctp_nl *nl;              // Netlink 連線
-    
-    enum endpoint_role default_role;  // 預設角色
-    
-    struct peer **peers;      // 已發現的端點
+    sd_event *event;                // systemd 事件迴圈
+    sd_bus *bus;                    // D-Bus 連線
+
+    char *config_filename;          // 配置檔案路徑
+
+    mctp_nl *nl;                    // Netlink 連線
+
+    enum endpoint_role default_role; // 所有介面的預設角色
+
+    struct peer **peers;            // 已發現的端點（動態陣列，運行中會 realloc）
     size_t num_peers;
-    
-    struct net **nets;        // MCTP 網路
+
+    struct net **nets;              // MCTP 網路
     size_t num_nets;
-    
-    mctp_eid_t dyn_eid_min;   // 動態 EID 範圍
-    mctp_eid_t dyn_eid_max;
-    
-    uint64_t mctp_timeout;    // 訊息逾時（微秒）
-    uint8_t uuid[16];         // 本機 UUID
+
+    mctp_eid_t dyn_eid_min;         // 動態 EID 分配範圍下限
+    mctp_eid_t dyn_eid_max;         // 動態 EID 分配範圍上限
+
+    uint64_t mctp_timeout;          // MCTP 回應逾時（微秒）
+
+    uint8_t iid;                    // 下一個要使用的 Instance ID
+
+    uint8_t uuid[16];               // 本機 UUID
+
+    struct msg_type_support *supported_msg_types; // 支援的訊息類型及版本
+    size_t num_supported_msg_types;
+
+    bool verbose;                   // 是否啟用詳細日誌
+
+    uint8_t max_pool_size;          // Bridge 的最大 EID pool 大小
 };
 
 // 端點（Peer）
 struct peer {
-    uint32_t net;             // 網路 ID
-    mctp_eid_t eid;           // 端點 ID
-    
-    enum { REMOTE, LOCAL } state;
-    
-    dest_phys phys;           // 實體地址
-    
-    bool published;           // 是否已發布到 D-Bus
-    char *path;               // D-Bus 物件路徑
-    
-    uint8_t *message_types;   // 支援的訊息類型
+    uint32_t net;                   // 網路 ID
+    mctp_eid_t eid;                 // 端點 ID
+
+    int local_count;                // 同一 EID 的本地介面引用計數
+
+    dest_phys phys;                 // 實體地址（僅 REMOTE 有效）
+
+    enum { REMOTE, LOCAL } state;   // 端點狀態
+
+    // D-Bus 相關
+    bool published;                 // 是否已發布到 D-Bus
+    sd_bus_slot *slot_obmc_endpoint; // OpenBMC Endpoint 介面 slot
+    sd_bus_slot *slot_cc_endpoint;   // CodeConstruct Endpoint 介面 slot
+    sd_bus_slot *slot_bridge;        // Bridge 介面 slot
+    sd_bus_slot *slot_uuid;          // UUID 介面 slot
+    char *path;                     // D-Bus 物件路徑
+
+    bool have_neigh;                // 是否已建立核心鄰居條目
+    bool have_route;                // 是否已建立核心路由條目
+
+    uint32_t mtu;                   // 路由 MTU
+
+    uint8_t *message_types;         // 支援的訊息類型（Get Message Type 回應）
     size_t num_message_types;
-    
-    uint8_t *uuid;            // 端點 UUID
-    
-    bool degraded;            // 連接狀態
-    uint32_t mtu;             // 路由 MTU
+
+    uint8_t endpoint_type;          // 端點類型（Get Endpoint ID 回應）
+    uint8_t medium_spec;            // 介質規格（Get Endpoint ID 回應）
+
+    uint8_t *uuid;                  // 端點 UUID（malloc 的 16 bytes）
+
+    struct ctx *ctx;                // 反向指標到全域上下文
+
+    // 連接狀態與恢復
+    bool degraded;                  // 是否處於降級狀態
+    struct {
+        uint64_t delay;             // 恢復延遲
+        sd_event_source *source;    // 恢復計時器
+        int npolls;                 // 輪詢次數
+        mctp_eid_t eid;             // 恢復用 EID
+        uint8_t endpoint_type;      // 恢復用端點類型
+        uint8_t medium_spec;        // 恢復用介質規格
+    } recovery;
+
+    // EID Pool（用於 Bridge 場景）
+    uint8_t pool_size;              // EID pool 大小
+    uint8_t pool_start;             // EID pool 起始值
 };
 
 // MCTP 網路
 struct net {
-    struct ctx *ctx;
-    uint32_t net;             // 網路 ID
-    
-    struct peer *peers[256];  // EID 到 peer 的映射
-    
-    char *path;               // D-Bus 物件路徑
+    struct ctx *ctx;                // 指向全域上下文
+    uint32_t net;                   // 網路 ID
+
+    struct peer *peers[256];        // EID 到 peer 的映射（直接索引）
+
+    sd_bus_slot *slot;              // D-Bus slot
+    char *path;                     // D-Bus 物件路徑
 };
 ```
 

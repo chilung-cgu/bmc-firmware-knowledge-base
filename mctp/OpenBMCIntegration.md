@@ -57,12 +57,13 @@ mctpd 是 OpenBMC 生態系統中的 MCTP 基礎設施元件，提供：
 
 mctpd 實作以下 OpenBMC 標準介面：
 
-| 介面 | 規範位置 | 說明 |
-|------|----------|------|
+| 介面                                | 規範位置                 | 說明          |
+| ----------------------------------- | ------------------------ | ------------- |
 | `xyz.openbmc_project.MCTP.Endpoint` | phosphor-dbus-interfaces | MCTP 端點資訊 |
-| `xyz.openbmc_project.Common.UUID` | phosphor-dbus-interfaces | 端點 UUID |
+| `xyz.openbmc_project.Common.UUID`   | phosphor-dbus-interfaces | 端點 UUID     |
 
 **介面定義來源**：
+
 ```
 https://github.com/openbmc/phosphor-dbus-interfaces/tree/master/yaml/xyz/openbmc_project/MCTP
 ```
@@ -98,10 +99,10 @@ om = dbus.Interface(
 for path, interfaces in om.GetManagedObjects().items():
     if 'xyz.openbmc_project.MCTP.Endpoint' not in interfaces:
         continue
-        
+
     endpoint = interfaces['xyz.openbmc_project.MCTP.Endpoint']
     types = endpoint['SupportedMessageTypes']
-    
+
     # 檢查是否支援 PLDM (type 1)
     if 1 in types:
         eid = endpoint['EID']
@@ -213,23 +214,23 @@ busctl call au.com.codeconstruct.MCTP1 /au/com/codeconstruct/mctp1 \
 ```yaml
 # phosphor-dbus-interfaces/yaml/xyz/openbmc_project/MCTP/Endpoint.yaml
 description: >
-    This interface represents an MCTP endpoint.
+  This interface represents an MCTP endpoint.
 
 properties:
-    - name: NetworkId
-      type: uint32
-      description: >
-          The network id of this endpoint.
+  - name: NetworkId
+    type: uint32
+    description: >
+      The network id of this endpoint.
 
-    - name: EID
-      type: byte
-      description: >
-          The Endpoint ID of this endpoint.
+  - name: EID
+    type: byte
+    description: >
+      The Endpoint ID of this endpoint.
 
-    - name: SupportedMessageTypes
-      type: array[byte]
-      description: >
-          The MCTP message types supported by this endpoint.
+  - name: SupportedMessageTypes
+    type: array[byte]
+    description: >
+      The MCTP message types supported by this endpoint.
 ```
 
 ### mctpd 實作
@@ -237,14 +238,14 @@ properties:
 mctpd 完全實作此介面：
 
 ```c
-// 在 mctpd.c 中
-static const sd_bus_vtable endpoint_vtable[] = {
+// 在 mctpd.c 中（簡化說明，實際 getter 均使用同一函式 bus_endpoint_get_prop）
+static const sd_bus_vtable bus_endpoint_obmc_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("EID", "y", get_endpoint_eid, 0,
+    SD_BUS_PROPERTY("NetworkId", "u", bus_endpoint_get_prop, 0,
                     SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NetworkId", "u", get_endpoint_network, 0,
+    SD_BUS_PROPERTY("EID", "y", bus_endpoint_get_prop, 0,
                     SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("SupportedMessageTypes", "ay", get_message_types, 0,
+    SD_BUS_PROPERTY("SupportedMessageTypes", "ay", bus_endpoint_get_prop, 0,
                     SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_VTABLE_END,
 };

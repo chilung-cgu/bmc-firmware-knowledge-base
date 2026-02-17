@@ -46,11 +46,11 @@ MCTP 橋接器是連接兩個 MCTP 網路的端點，允許訊息在不同網路
 
 ### 橋接器功能
 
-| 功能 | 說明 |
-|------|------|
+| 功能     | 說明                             |
+| -------- | -------------------------------- |
 | 訊息轉發 | 在上游和下游網路間轉發 MCTP 訊息 |
-| EID 管理 | 管理下游端點的 EID 分配 |
-| 路由 | 提供下游端點的路由資訊 |
+| EID 管理 | 管理下游端點的 EID 分配          |
+| 路由     | 提供下游端點的路由資訊           |
 
 ---
 
@@ -75,9 +75,9 @@ sequenceDiagram
     participant Bridge as Bridge
 
     mctpd->>Bridge: Set Endpoint ID (EID=12, operation=Force)
-    
+
     Note over Bridge: 橋接器接受 EID 並<br/>請求 EID 池
-    
+
     Bridge-->>mctpd: Response<br/>completion_code=0<br/>endpoint_type=Bridge<br/>pool_size_request=11
 ```
 
@@ -91,13 +91,13 @@ sequenceDiagram
     participant Bridge as Bridge
 
     Note over mctpd: 檢查 dynamic_eid_range<br/>[8, 254]
-    
+
     Note over mctpd: 尋找連續的 11 個 EID<br/>找到 50-60
-    
+
     mctpd->>Bridge: Allocate Endpoint IDs<br/>first_eid=50, pool_size=11
-    
+
     Bridge-->>mctpd: Accept
-    
+
     Note over mctpd: 建立閘道路由<br/>50-60 via 12
 ```
 
@@ -127,10 +127,10 @@ au.com.codeconstruct.MCTP.Bridge1   interface -         -            -
 
 ### 屬性
 
-| 屬性 | 類型 | 說明 |
-|------|------|------|
+| 屬性      | 類型 | 說明                 |
+| --------- | ---- | -------------------- |
 | PoolStart | byte | EID 池起始值（包含） |
-| PoolEnd | byte | EID 池結束值（包含） |
+| PoolEnd   | byte | EID 池結束值（包含） |
 
 ---
 
@@ -145,7 +145,7 @@ for eid in $(seq 50 60); do
         /au/com/codeconstruct/mctp1/networks/1 \
         au.com.codeconstruct.MCTP.Network1 \
         LearnEndpoint y $eid 2>/dev/null)
-    
+
     if [ $? -eq 0 ]; then
         echo "Found: EID $eid"
     fi
@@ -163,7 +163,7 @@ BRIDGE_PATH="/au/com/codeconstruct/mctp1/networks/1/endpoints/12"
 
 pool_start=$(busctl get-property au.com.codeconstruct.MCTP1 \
     $BRIDGE_PATH au.com.codeconstruct.MCTP.Bridge1 PoolStart | cut -d' ' -f2)
-    
+
 pool_end=$(busctl get-property au.com.codeconstruct.MCTP1 \
     $BRIDGE_PATH au.com.codeconstruct.MCTP.Bridge1 PoolEnd | cut -d' ' -f2)
 
@@ -175,7 +175,7 @@ for eid in $(seq $pool_start $pool_end); do
         /au/com/codeconstruct/mctp1/networks/1 \
         au.com.codeconstruct.MCTP.Network1 \
         LearnEndpoint y $eid 2>/dev/null)
-    
+
     if [ $? -eq 0 ]; then
         path=$(echo $result | cut -d'"' -f2)
         echo "  EID $eid: $path"
@@ -198,6 +198,7 @@ max_pool_size = 15
 ```
 
 **說明**：
+
 - 如果橋接器請求超過此值，會被截斷
 - 防止單一橋接器耗盡 EID 池
 - 預設值 15
@@ -212,29 +213,33 @@ dynamic_eid_range = [8, 254]
 ```
 
 **分配規則**：
+
 - 需要連續的 EID
 - 從範圍中找到足夠大的空閒區塊
 - 如果無法找到連續區塊，分配失敗
 
 ### endpoint_poll_ms
 
-啟用後，mctpd 會在分配 EID 池給橋接器後，自動開始輪詢下游端點：
+> ❓ **尚未實作**：當前 upstream `mctpd.c` 中僅有 TODO 註解，此配置選項不會被解析。
+
+設計上啟用後，mctpd 會在分配 EID 池給橋接器後，自動開始輪詢下游端點：
 
 ```toml
 # /etc/mctpd.conf
 [bus-owner]
-# 每 5 秒輪詢一次橋接下游端點
+# 規劃中：每 5 秒輪詢一次橋接下游端點
 endpoint_poll_ms = 5000
 ```
 
-**說明**：
+**規劃說明**：
+
 - 設為 0 時禁用（預設）
-- 有效範圍：2500-10000 毫秒
+- 規劃有效範圍：2500-10000 毫秒
 - 成功回應的端點會自動建立 D-Bus 物件和路由
 - 未回應的端點會持續輪詢直到可達
 
 > [!NOTE]
-> 此功能為 unreleased 功能（v2.4 之後），可替代手動呼叫 `Network.LearnEndpoint` 逐一發現下游端點。
+> 此功能在當前 upstream 中尚未實作。可替代方案是手動呼叫 `Network.LearnEndpoint` 逐一發現下游端點。
 
 ---
 
@@ -281,11 +286,11 @@ sequenceDiagram
 
     BMC->>BMC: Lookup route for EID 50
     Note over BMC: Route: gw 12
-    
+
     BMC->>Bridge: MCTP Message (dest=50)
     Bridge->>Bridge: Route lookup
     Bridge->>Endpoint: MCTP Message (dest=50)
-    
+
     Endpoint-->>Bridge: Response (dest=8)
     Bridge-->>BMC: Response
 ```
@@ -312,6 +317,7 @@ Get Endpoint ID 等控制訊息也透過橋接器轉發：
 3. 下游端點無法被發現
 
 **解決方案**：
+
 - 增加 dynamic_eid_range
 - 減少已使用的 EID
 - 調整 max_pool_size
@@ -332,11 +338,11 @@ busctl get-property au.com.codeconstruct.MCTP1 \
 > [!WARNING]
 > Interface.BusOwner1.LearnEndpoint 不適用於橋接器設定。
 
-| 方法 | 適用於橋接器？ | 原因 |
-|------|----------------|------|
-| AssignEndpoint | ✅ 是 | 執行 Set Endpoint ID，可獲取池請求 |
-| SetupEndpoint | ⚠️ 部分 | 如果橋接器已有 EID，無法獲取池 |
-| LearnEndpoint | ❌ 否 | 不執行 Set Endpoint ID |
+| 方法           | 適用於橋接器？ | 原因                               |
+| -------------- | -------------- | ---------------------------------- |
+| AssignEndpoint | ✅ 是          | 執行 Set Endpoint ID，可獲取池請求 |
+| SetupEndpoint  | ⚠️ 部分        | 如果橋接器已有 EID，無法獲取池     |
+| LearnEndpoint  | ❌ 否          | 不執行 Set Endpoint ID             |
 
 ---
 
@@ -350,7 +356,7 @@ import dbus
 def is_bridge(path):
     bus = dbus.SystemBus()
     proxy = bus.get_object('au.com.codeconstruct.MCTP1', path)
-    
+
     try:
         introspection = proxy.Introspect(
             dbus_interface='org.freedesktop.DBus.Introspectable')
@@ -380,7 +386,7 @@ for path, interfaces in om.GetManagedObjects().items():
     if 'au.com.codeconstruct.MCTP.Bridge1' in interfaces:
         bridge = interfaces['au.com.codeconstruct.MCTP.Bridge1']
         endpoint = interfaces['xyz.openbmc_project.MCTP.Endpoint']
-        
+
         print(f"Bridge EID {endpoint['EID']}: "
               f"Pool {bridge['PoolStart']}-{bridge['PoolEnd']}")
 ```

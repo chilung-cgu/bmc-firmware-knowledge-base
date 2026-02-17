@@ -21,6 +21,7 @@ MCTP 橋接器是連接兩個 MCTP 網路的端點，可以為下游端點分配
 ```
 
 **範例**：
+
 - `/au/com/codeconstruct/mctp1/networks/1/endpoints/12`
 
 ---
@@ -44,11 +45,11 @@ au.com.codeconstruct.MCTP.Bridge1   interface -         -            -
 
 ### PoolStart
 
-| 項目 | 值 |
-|------|-----|
+| 項目     | 值         |
+| -------- | ---------- |
 | **型別** | `y` (byte) |
-| **存取** | 唯讀 |
-| **訊號** | const |
+| **存取** | 唯讀       |
+| **訊號** | const      |
 
 分配給此橋接器的 EID 池起始值（包含）。
 
@@ -63,11 +64,11 @@ y 50
 
 ### PoolEnd
 
-| 項目 | 值 |
-|------|-----|
+| 項目     | 值         |
+| -------- | ---------- |
 | **型別** | `y` (byte) |
-| **存取** | 唯讀 |
-| **訊號** | const |
+| **存取** | 唯讀       |
+| **訊號** | const      |
 
 分配給此橋接器的 EID 池結束值（包含）。
 
@@ -128,19 +129,19 @@ sequenceDiagram
     Client->>mctpd: AssignEndpoint(hwaddr)
     mctpd->>Bridge: Set Endpoint ID
     Bridge-->>mctpd: Response (pool_size_request=11)
-    
+
     Note over mctpd: 橋接器請求 11 個 EID
-    
+
     mctpd->>mctpd: 檢查 dynamic_eid_range
     mctpd->>mctpd: 分配連續 EID 池 (50-60)
-    
+
     mctpd->>Bridge: Allocate Endpoint IDs (50, 11)
     Bridge-->>mctpd: Response (accepted)
-    
+
     mctpd->>mctpd: 建立端點物件
     mctpd->>mctpd: 加入 Bridge1 介面
     mctpd->>mctpd: 建立閘道路由 (50-60 via 12)
-    
+
     mctpd-->>Client: (eid=12, net=1, path, new=true)
 ```
 
@@ -231,6 +232,7 @@ eid 50-60: gw 12 net 1 mtu 0
 ```
 
 這表示：
+
 - EID 12 直接透過 mctpi2c1 連接
 - EID 50-60 透過 EID 12（閘道）路由
 
@@ -246,11 +248,12 @@ au.com.codeconstruct.MCTP.Bridge1      interface -         -                    
 .PoolEnd                               property  y         60                       const
 .PoolStart                             property  y         50                       const
 au.com.codeconstruct.MCTP.Endpoint1    interface -         -                        -
+.Recover                               method    -         -                        -
 .Remove                                method    -         -                        -
 .SetMTU                                method    u         -                        -
 .Connectivity                          property  s         "Available"              emits-change
 xyz.openbmc_project.Common.UUID        interface -         -                        -
-.UUID                                  property  s         "..."                    emits-change
+.UUID                                  property  s         "..."                    const
 xyz.openbmc_project.MCTP.Endpoint      interface -         -                        -
 .EID                                   property  y         12                       const
 .NetworkId                             property  u         1                        const
@@ -279,11 +282,11 @@ for path, interfaces in objects.items():
     if 'au.com.codeconstruct.MCTP.Bridge1' in interfaces:
         bridge = interfaces['au.com.codeconstruct.MCTP.Bridge1']
         endpoint = interfaces['xyz.openbmc_project.MCTP.Endpoint']
-        
+
         eid = endpoint['EID']
         pool_start = bridge['PoolStart']
         pool_end = bridge['PoolEnd']
-        
+
         print(f"Bridge EID {eid}: Pool {pool_start}-{pool_end}")
 ```
 
@@ -296,7 +299,7 @@ def get_bridge_info(path):
     bus = dbus.SystemBus()
     proxy = bus.get_object('au.com.codeconstruct.MCTP1', path)
     props = dbus.Interface(proxy, 'org.freedesktop.DBus.Properties')
-    
+
     try:
         pool_start = props.Get('au.com.codeconstruct.MCTP.Bridge1', 'PoolStart')
         pool_end = props.Get('au.com.codeconstruct.MCTP.Bridge1', 'PoolEnd')

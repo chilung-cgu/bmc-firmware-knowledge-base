@@ -27,7 +27,11 @@ mctp route del <eid>[-<eid>] gw <eid> [net <net>]
 mctp neigh
 mctp neigh show [dev <network>]
 mctp neigh add <eid> dev <device> lladdr <physaddr>
+        <physaddr> syntax is for example "1d" or "aa:bb:cc:11:22:33"
 mctp neigh del <eid> dev <device>
+
+mctp link serial <device>
+mctp monitor
 ```
 
 ---
@@ -49,13 +53,13 @@ mctpi2c2: net 2, addr 0x11, mtu 254, down
 
 **輸出欄位說明**：
 
-| 欄位 | 說明 |
-|------|------|
-| `net` | MCTP 網路 ID |
-| `addr` | 實體地址（如 I2C slave address） |
-| `mtu` | 最大傳輸單元 |
-| `up/down` | 介面狀態 |
-| `bus-owner` | Bus owner 的實體地址 |
+| 欄位        | 說明                             |
+| ----------- | -------------------------------- |
+| `net`       | MCTP 網路 ID                     |
+| `addr`      | 實體地址（如 I2C slave address） |
+| `mtu`       | 最大傳輸單元                     |
+| `up/down`   | 介面狀態                         |
+| `bus-owner` | Bus owner 的實體地址             |
 
 ### mctp link set
 
@@ -78,12 +82,24 @@ mctp link set mctpi2c1 bus-owner 0x10
 
 **參數說明**：
 
-| 參數 | 說明 |
-|------|------|
-| `up/down` | 啟用或停用介面 |
-| `mtu <value>` | 設定 MTU 值 |
-| `network <id>` | 設定 MCTP 網路 ID |
+| 參數               | 說明                    |
+| ------------------ | ----------------------- |
+| `up/down`          | 啟用或停用介面          |
+| `mtu <value>`      | 設定 MTU 值             |
+| `network <id>`     | 設定 MCTP 網路 ID       |
 | `bus-owner <addr>` | 設定 bus owner 實體地址 |
+
+### mctp link serial
+
+將串列埠設定為 MCTP 傳輸介面：
+
+```bash
+# 附加 MCTP 行規程到串列裝置
+mctp link serial /dev/ttyS0
+```
+
+> [!NOTE]
+> 此命令會設定 tty line discipline 為 `N_MCTP`，然後進入 `pause()` 等待。通常用於手動建立 mctp-serial 介面。
 
 ---
 
@@ -152,10 +168,10 @@ $ mctp route show net 1
 
 **路由類型**：
 
-| 類型 | 說明 |
-|------|------|
-| `local` | 本地 EID |
-| `dev` | 直接路由（透過介面） |
+| 類型     | 說明                   |
+| -------- | ---------------------- |
+| `local`  | 本地 EID               |
+| `dev`    | 直接路由（透過介面）   |
 | `via/gw` | 閘道路由（透過橋接器） |
 
 ### mctp route add
@@ -181,13 +197,13 @@ mctp route add 100 gw 12 net 1 mtu 128
 
 **參數說明**：
 
-| 參數 | 說明 |
-|------|------|
-| `<eid>` | 單一目標 EID |
-| `<eid>-<eid>` | EID 範圍 |
-| `via <dev>` | 直接路由的輸出介面 |
-| `gw <eid>` | 閘道（下一跳）EID |
-| `net <id>` | 網路 ID（用於閘道路由） |
+| 參數          | 說明                         |
+| ------------- | ---------------------------- |
+| `<eid>`       | 單一目標 EID                 |
+| `<eid>-<eid>` | EID 範圍                     |
+| `via <dev>`   | 直接路由的輸出介面           |
+| `gw <eid>`    | 閘道（下一跳）EID            |
+| `net <id>`    | 網路 ID（用於閘道路由）      |
 | `mtu <value>` | 路由 MTU（0 = 使用介面 MTU） |
 
 ### mctp route del
@@ -230,10 +246,10 @@ $ mctp neigh show dev mctpi2c1
 
 **輸出欄位說明**：
 
-| 欄位 | 說明 |
-|------|------|
-| `eid` | 端點識別碼 |
-| `dev` | 網路介面 |
+| 欄位     | 說明                            |
+| -------- | ------------------------------- |
+| `eid`    | 端點識別碼                      |
+| `dev`    | 網路介面                        |
 | `lladdr` | 鏈路層地址（I2C slave address） |
 
 ### mctp neigh add
@@ -346,17 +362,20 @@ mctp route add 50-60 gw 12 net 1
 ### 常見輸出範例
 
 **mctp link show**：
+
 ```
 mctpi2c1: net 1, addr 0x10, mtu 254, up
   bus-owner: 0x10
 ```
 
 **mctp address show**：
+
 ```
 dev mctpi2c1: eid 8
 ```
 
 **mctp route show**：
+
 ```
 eid 8: dev mctpi2c1 mtu 0 (local)
 eid 10: dev mctpi2c1 mtu 128
@@ -364,6 +383,7 @@ eid 50-60: dev mctpi2c1 mtu 0
 ```
 
 **mctp neigh show**：
+
 ```
 eid 10: dev mctpi2c1 lladdr 0x1d
 ```
@@ -374,23 +394,34 @@ eid 10: dev mctpi2c1 lladdr 0x1d
 
 ### 常見錯誤訊息
 
-| 錯誤 | 原因 | 解決方案 |
-|------|------|----------|
-| `RTNETLINK answers: No such device` | 介面不存在 | 確認介面名稱正確 |
-| `RTNETLINK answers: File exists` | 條目已存在 | 先刪除再新增 |
-| `RTNETLINK answers: Invalid argument` | 參數無效 | 檢查 EID 範圍（8-254） |
-| `RTNETLINK answers: Permission denied` | 權限不足 | 使用 sudo 執行 |
+| 錯誤                                   | 原因       | 解決方案               |
+| -------------------------------------- | ---------- | ---------------------- |
+| `RTNETLINK answers: No such device`    | 介面不存在 | 確認介面名稱正確       |
+| `RTNETLINK answers: File exists`       | 條目已存在 | 先刪除再新增           |
+| `RTNETLINK answers: Invalid argument`  | 參數無效   | 檢查 EID 範圍（8-254） |
+| `RTNETLINK answers: Permission denied` | 權限不足   | 使用 sudo 執行         |
+
+---
+
+## mctp monitor
+
+監聽 MCTP netlink 事件（類似 `ip monitor`）：
+
+```bash
+# 即時監聽 MCTP 網路事件（介面、路由、鄰居變更）
+mctp monitor
+```
 
 ---
 
 ## 與 ip 命令對比
 
-| 功能 | mctp | ip |
-|------|------|-----|
-| 介面管理 | `mctp link` | `ip link` |
+| 功能     | mctp           | ip           |
+| -------- | -------------- | ------------ |
+| 介面管理 | `mctp link`    | `ip link`    |
 | 地址管理 | `mctp address` | `ip address` |
-| 路由管理 | `mctp route` | `ip route` |
-| 鄰居管理 | `mctp neigh` | `ip neigh` |
+| 路由管理 | `mctp route`   | `ip route`   |
+| 鄰居管理 | `mctp neigh`   | `ip neigh`   |
 
 ---
 
