@@ -6,12 +6,12 @@ Host-BMC 模組處理 BMC 與 Host Firmware（如 PHYP、x86 BIOS）之間的 PL
 
 ## 概述
 
-| 項目 | 說明 |
-|------|------|
-| **位置** | `host-bmc/` |
-| **核心類別** | `HostPDRHandler` |
-| **功能** | Host PDR 擷取與合併、D-Bus 事件轉換、FRU/Inventory 管理、Host 狀態感測 |
-| **原始碼** | `host_pdr_handler.cpp`（47KB）、18 個 D-Bus helper 檔案 |
+| 項目         | 說明                                                                   |
+| ------------ | ---------------------------------------------------------------------- |
+| **位置**     | `host-bmc/`                                                            |
+| **核心類別** | `HostPDRHandler`                                                       |
+| **功能**     | Host PDR 擷取與合併、D-Bus 事件轉換、FRU/Inventory 管理、Host 狀態感測 |
+| **原始碼**   | `host_pdr_handler.cpp`（~46KB）、26 個 D-Bus helper 檔案               |
 
 ---
 
@@ -25,7 +25,7 @@ graph TB
         HostCond["HostCondition<br/>Host 狀態監控"]
 
         subgraph DBusHelpers["D-Bus Inventory Helpers"]
-            Asset["Asset"] 
+            Asset["Asset"]
             Chassis["Chassis"]
             CPUCore["CPUCore"]
             PCIeDevice["PCIeDevice"]
@@ -163,17 +163,17 @@ graph LR
 
 每種硬體元件類型都有對應的 D-Bus helper：
 
-| 檔案 | D-Bus 介面 | 說明 |
-|------|-----------|------|
-| `asset.cpp/hpp` | `xyz.openbmc_project.Inventory.Decorator.Asset` | 資產資訊 |
-| `availability.cpp/hpp` | `xyz.openbmc_project.State.Decorator.Availability` | 可用性狀態 |
-| `chassis.cpp/hpp` | `xyz.openbmc_project.Inventory.Item.Chassis` | 機殼 |
-| `cpu_core.cpp/hpp` | `xyz.openbmc_project.Inventory.Item.CpuCore` | CPU 核心 |
-| `pcie_device.cpp/hpp` | `xyz.openbmc_project.Inventory.Item.PCIeDevice` | PCIe 設備 |
-| `pcie_slot.cpp/hpp` | `xyz.openbmc_project.Inventory.Item.PCIeSlot` | PCIe 插槽 |
-| `cable.cpp/hpp` | `xyz.openbmc_project.Inventory.Item.Cable` | 線纜 |
-| `inventory_item.cpp/hpp` | `xyz.openbmc_project.Inventory.Item` | 通用庫存項目 |
-| `custom_dbus.cpp/hpp` | 多介面 | 自訂 D-Bus 物件管理 |
+| 檔案                     | D-Bus 介面                                         | 說明                |
+| ------------------------ | -------------------------------------------------- | ------------------- |
+| `asset.cpp/hpp`          | `xyz.openbmc_project.Inventory.Decorator.Asset`    | 資產資訊            |
+| `availability.cpp/hpp`   | `xyz.openbmc_project.State.Decorator.Availability` | 可用性狀態          |
+| `chassis.cpp/hpp`        | `xyz.openbmc_project.Inventory.Item.Chassis`       | 機殼                |
+| `cpu_core.cpp/hpp`       | `xyz.openbmc_project.Inventory.Item.CpuCore`       | CPU 核心            |
+| `pcie_device.cpp/hpp`    | `xyz.openbmc_project.Inventory.Item.PCIeDevice`    | PCIe 設備           |
+| `pcie_slot.cpp/hpp`      | `xyz.openbmc_project.Inventory.Item.PCIeSlot`      | PCIe 插槽           |
+| `cable.cpp/hpp`          | `xyz.openbmc_project.Inventory.Item.Cable`         | 線纜                |
+| `inventory_item.cpp/hpp` | `xyz.openbmc_project.Inventory.Item`               | 通用庫存項目        |
+| `custom_dbus.cpp/hpp`    | 多介面                                             | 自訂 D-Bus 物件管理 |
 
 另有僅標頭定義的類型：`Board.hpp`、`Connector.hpp`、`FabricAdapter.hpp`、`Fan.hpp`、`Motherboard.hpp`、`Panel.hpp`、`PowerSupply.hpp`、`VRM.hpp`
 
@@ -187,14 +187,14 @@ graph LR
 
 ## 原始碼結構
 
-| 檔案 | 大小 | 說明 |
-|------|------|------|
-| `host_pdr_handler.cpp` | 47KB | Host PDR 處理核心（最大檔案） |
-| `host_pdr_handler.hpp` | 13KB | HostPDRHandler 類別定義 |
-| `dbus_to_event_handler.cpp/hpp` | 7KB | D-Bus → PLDM 事件轉換 |
-| `host_condition.cpp/hpp` | 3KB | Host 狀態監控 |
-| `utils.cpp/hpp` | 3KB | Host-BMC 工具函式 |
-| `dbus/` | 38 files | D-Bus Inventory helpers |
+| 檔案                            | 大小     | 說明                          |
+| ------------------------------- | -------- | ----------------------------- |
+| `host_pdr_handler.cpp`          | 47KB     | Host PDR 處理核心（最大檔案） |
+| `host_pdr_handler.hpp`          | 13KB     | HostPDRHandler 類別定義       |
+| `dbus_to_event_handler.cpp/hpp` | 7KB      | D-Bus → PLDM 事件轉換         |
+| `host_condition.cpp/hpp`        | 3KB      | Host 狀態監控                 |
+| `utils.cpp/hpp`                 | 3KB      | Host-BMC 工具函式             |
+| `dbus/`                         | 26 files | D-Bus Inventory helpers       |
 
 ---
 
@@ -206,4 +206,4 @@ graph LR
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

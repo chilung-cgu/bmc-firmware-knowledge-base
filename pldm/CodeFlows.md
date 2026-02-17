@@ -2,6 +2,9 @@
 
 本文件說明 OpenBMC PLDM 中的重要程式碼執行流程。
 
+> ⚠️ **概念性說明**：本文件中的程式碼片段多為 **虛擬碼 (pseudo-code)**，用於說明流程概念。實際的函式名稱、參數和 API 可能與顯示的不同。實際實作請參考 upstream source code。
+> 只有明確標註為「範例」或指定了檔案名的程式碼才從 source code 實際擷取。
+
 ---
 
 ## BMC 作為 PLDM Responder
@@ -53,7 +56,7 @@ sequenceDiagram
 pldmd 透過 MCTP socket 接收傳入的 PLDM 訊息：
 
 ```cpp
-// pldmd 接收訊息
+// 虛擬碼 — 實際實作為 processRxMsg() 在 pldmd/pldmd.cpp L102-165
 void receiveMessage(mctp_eid_t eid, uint8_t* data, size_t len) {
     // 從 MCTP 傳輸層接收原始訊息
     // 驗證 PLDM 標頭
@@ -65,11 +68,12 @@ void receiveMessage(mctp_eid_t eid, uint8_t* data, size_t len) {
 根據 PLDM Type 和 Command Code 分發到對應的 Handler：
 
 ```cpp
-// 訊息路由邏輯
+// 虛擬碼 — 實際是透過 invoker.handle(tid, pldmType, cmd, request, reqLen)
+// 內部使用 handlers.at(pldmType)->handle(tid, cmd, request, len)
 void routeMessage(uint8_t pldmType, uint8_t cmdCode, Request& req) {
     auto handler = handlers[pldmType][cmdCode];
     if (handler) {
-        response = handler(req, reqLen);
+        response = handler(tid, req, reqLen);
     }
 }
 ```
@@ -127,9 +131,9 @@ int rc = encode_get_pdr_resp(
 pldmd 將回應訊息傳回給請求者：
 
 ```cpp
-// 發送回應
+// 虛擬碼 — 實際回應透過 PldmTransport::sendMsg() 發送
 void sendResponse(mctp_eid_t eid, Response& resp) {
-    mctp_send(eid, resp.data(), resp.size());
+    pldmTransport.sendMsg(eid, resp.data(), resp.size());
 }
 ```
 
@@ -190,7 +194,7 @@ encode_get_types_req(instanceId, msg);
 透過 requester 模組發送：
 
 ```cpp
-// requester/handler.hpp
+// 虛擬碼 — 實際使用 requester::Handler::registerRequest() + coroutine
 template <typename Callback>
 void sendRequest(mctp_eid_t eid, Request request, Callback callback) {
     // 分配 Instance ID
@@ -200,7 +204,7 @@ void sendRequest(mctp_eid_t eid, Request request, Callback callback) {
     responseCallbacks[eid][instanceId] = callback;
 
     // 發送請求
-    pldmd->send(eid, request);
+    pldmTransport.sendMsg(eid, request);
 
     // 設定超時
     startTimer(eid, instanceId, timeout);
@@ -212,9 +216,12 @@ void sendRequest(mctp_eid_t eid, Request request, Callback callback) {
 pldmd 透過 Instance ID 匹配回應與請求：
 
 ```cpp
+// 虛擬碼 — 實際的 Instance ID 是透過 unpack_pldm_header() 取得 hdrFields.instance
 void handleResponse(mctp_eid_t eid, Response response) {
-    // 解析 Instance ID
-    auto instanceId = response[0] & 0x1F;
+    // 解析 Instance ID（透過 PLDM header 解析）
+    pldm_header_info hdrFields{};
+    unpack_pldm_header(hdr, &hdrFields);
+    auto instanceId = hdrFields.instance;
 
     // 查找對應的回調
     auto callback = responseCallbacks[eid][instanceId];

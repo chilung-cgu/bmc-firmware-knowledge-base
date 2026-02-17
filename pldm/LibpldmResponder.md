@@ -6,11 +6,11 @@ libpldmresponder 是 pldmd 的核心函式庫，提供所有 **PLDM Responder** 
 
 ## 概述
 
-| 項目 | 說明 |
-|------|------|
-| **類型** | 靜態函式庫（`libpldmresponder`） |
-| **位置** | `libpldmresponder/` |
-| **檔案數** | 38 個（含 2 個子目錄） |
+| 項目         | 說明                                                  |
+| ------------ | ----------------------------------------------------- |
+| **類型**     | 靜態函式庫（`libpldmresponder`）                      |
+| **位置**     | `libpldmresponder/`                                   |
+| **檔案數**   | 38 個（含 2 個子目錄）                                |
 | **編譯選項** | `meson.options` 中 `libpldmresponder`（預設 enabled） |
 
 ---
@@ -95,12 +95,12 @@ public:
 
 `base::Handler`（`base.hpp`/`base.cpp`）處理最基本的 PLDM 探索命令：
 
-| 命令 | 代碼 | 說明 |
-|------|------|------|
-| `GetPLDMTypes` | 0x04 | 回報支援的 PLDM Type 列表 |
-| `GetPLDMCommands` | 0x05 | 回報特定 Type 支援的命令列表 |
-| `GetPLDMVersion` | 0x03 | 回報特定 Type 的 PLDM 協議版本 |
-| `GetTID` | 0x02 | 回報本機 Terminus ID |
+| 命令              | 代碼 | 說明                           |
+| ----------------- | ---- | ------------------------------ |
+| `GetPLDMTypes`    | 0x04 | 回報支援的 PLDM Type 列表      |
+| `GetPLDMCommands` | 0x05 | 回報特定 Type 支援的命令列表   |
+| `GetPLDMVersion`  | 0x03 | 回報特定 Type 的 PLDM 協議版本 |
+| `GetTID`          | 0x02 | 回報本機 Terminus ID           |
 
 > **面試重點**：`GetTID` 回應後會觸發 `_processSetEventReceiver()`，向 Host 發送 `SetEventReceiver` 命令。這是 PLDM 通訊建立的關鍵步驟——告訴 Host 將事件傳送給 BMC。
 
@@ -112,15 +112,15 @@ public:
 
 ### 支援的命令
 
-| 命令 | 說明 |
-|------|------|
-| `GetPDR` | 讀取 Platform Descriptor Records |
-| `SetStateEffecterStates` | 設定 State Effecter（如電源控制） |
-| `GetStateSensorReadings` | 讀取 State Sensor 值 |
-| `SetNumericEffecterValue` | 設定 Numeric Effecter |
-| `GetNumericEffecterValue` | 讀取 Numeric Effecter 目前值 |
-| `SetEventReceiver` | 設定事件接收者 |
-| `PlatformEventMessage` | 處理平台事件 |
+| 命令                      | 說明                              |
+| ------------------------- | --------------------------------- |
+| `GetPDR`                  | 讀取 Platform Descriptor Records  |
+| `SetStateEffecterStates`  | 設定 State Effecter（如電源控制） |
+| `GetStateSensorReadings`  | 讀取 State Sensor 值              |
+| `SetNumericEffecterValue` | 設定 Numeric Effecter             |
+| `GetNumericEffecterValue` | 讀取 Numeric Effecter 目前值      |
+| `SetEventReceiver`        | 設定事件接收者                    |
+| `PlatformEventMessage`    | 處理平台事件                      |
 
 ### PDR 管理
 
@@ -136,13 +136,13 @@ graph LR
 
 PDR 生成相關的標頭檔：
 
-| 檔案 | 說明 |
-|------|------|
-| `pdr_state_sensor.hpp` | 從 JSON 生成 State Sensor PDR |
-| `pdr_state_effecter.hpp` | 從 JSON 生成 State Effecter PDR |
+| 檔案                       | 說明                              |
+| -------------------------- | --------------------------------- |
+| `pdr_state_sensor.hpp`     | 從 JSON 生成 State Sensor PDR     |
+| `pdr_state_effecter.hpp`   | 從 JSON 生成 State Effecter PDR   |
 | `pdr_numeric_effecter.hpp` | 從 JSON 生成 Numeric Effecter PDR |
-| `pdr_utils.cpp/hpp` | PDR 工具函式（Repo 操作、解碼） |
-| `pdr.cpp/hpp` | PDR 基礎功能 |
+| `pdr_utils.cpp/hpp`        | PDR 工具函式（Repo 操作、解碼）   |
+| `pdr.cpp/hpp`              | PDR 基礎功能                      |
 
 ### 事件處理
 
@@ -158,7 +158,7 @@ void registerEventHandlers(EventType eventId, EventHandlers handlers) {
 }
 ```
 
-NVIDIA OEM 就是透過此介面註冊 legacy CPER event class 0xFA 的處理器。
+OEM 廠商可透過此介面註冊自定義 event class 的處理器。
 
 ### Effecter 操作
 
@@ -186,14 +186,18 @@ sequenceDiagram
 
 ### 支援的命令
 
-| 命令 | 說明 |
-|------|------|
-| `GetBIOSStringTable` | 取得 BIOS 字串表 |
-| `GetBIOSAttributeTable` | 取得 BIOS 屬性定義表 |
-| `GetBIOSAttributeValueTable` | 取得 BIOS 屬性值表 |
-| `SetBIOSAttributeCurrentValue` | 設定 BIOS 屬性當前值 |
-| `GetDateTime` | 取得日期時間 |
-| `SetDateTime` | 設定日期時間 |
+> **注意**：實隞 bios handler 只註冊以下 6 個命令，並非按表格類型拆分。
+
+| 命令                                   | 說明                                                      |
+| -------------------------------------- | --------------------------------------------------------- |
+| `GetBIOSTable`                         | 取得 BIOS 表格（以 tableType 參數區分 String/Attr/Value） |
+| `SetBIOSTable`                         | 設定 BIOS 表格                                            |
+| `GetBIOSAttributeCurrentValueByHandle` | 依 Handle 取得屬性當前值                                  |
+| `SetBIOSAttributeCurrentValue`         | 設定屬性當前值                                            |
+| `GetDateTime`                          | 取得日期時間                                              |
+| `SetDateTime`                          | 設定日期時間                                              |
+
+> 已根據 `libpldmresponder/bios.cpp` L78-108 handler 註冊驗證。
 
 ### BIOS 屬性系統
 
@@ -238,15 +242,15 @@ classDiagram
 
 相關檔案：
 
-| 檔案 | 大小 | 說明 |
-|------|------|------|
-| `bios_config.cpp` | 41KB | BIOS 配置管理核心（建表、D-Bus 整合） |
-| `bios_config.hpp` | 14KB | BIOS 配置類別定義 |
-| `bios_table.cpp/hpp` | 25KB | BIOS 表格操作工具 |
-| `bios_enum_attribute.cpp/hpp` | 13KB | 列舉型屬性 |
-| `bios_integer_attribute.cpp/hpp` | 10KB | 整數型屬性 |
-| `bios_string_attribute.cpp/hpp` | 9KB | 字串型屬性 |
-| `bios_attribute.cpp/hpp` | 5KB | 屬性抽象基底類別 |
+| 檔案                             | 大小 | 說明                                  |
+| -------------------------------- | ---- | ------------------------------------- |
+| `bios_config.cpp`                | 41KB | BIOS 配置管理核心（建表、D-Bus 整合） |
+| `bios_config.hpp`                | 14KB | BIOS 配置類別定義                     |
+| `bios_table.cpp/hpp`             | 25KB | BIOS 表格操作工具                     |
+| `bios_enum_attribute.cpp/hpp`    | 13KB | 列舉型屬性                            |
+| `bios_integer_attribute.cpp/hpp` | 10KB | 整數型屬性                            |
+| `bios_string_attribute.cpp/hpp`  | 9KB  | 字串型屬性                            |
+| `bios_attribute.cpp/hpp`         | 5KB  | 屬性抽象基底類別                      |
 
 ---
 
@@ -256,11 +260,11 @@ classDiagram
 
 ### 支援的命令
 
-| 命令 | 說明 |
-|------|------|
+| 命令                        | 說明                  |
+| --------------------------- | --------------------- |
 | `GetFRURecordTableMetadata` | 取得 FRU 表格的元資料 |
-| `GetFRURecordTable` | 讀取 FRU 記錄表 |
-| `GetFRURecordByOption` | 按條件查詢 FRU 記錄 |
+| `GetFRURecordTable`         | 讀取 FRU 記錄表       |
+| `GetFRURecordByOption`      | 按條件查詢 FRU 記錄   |
 
 ### FRU 表格建造流程
 
@@ -284,22 +288,22 @@ graph LR
 
 ## OEM 擴充介面
 
-`oem_handler.hpp` 定義了 4 個 OEM 抽象介面，供各廠商（IBM、NVIDIA、Ampere、Meta）實作：
+`oem_handler.hpp` 定義了 4 個 OEM 抽象介面，供各廠商實作（upstream 有 IBM 和 Ampere）：
 
 ### oem_platform::Handler
 
 最重要的 OEM 介面，提供平台相關的擴充點：
 
-| 方法 | 說明 |
-|------|------|
-| `getOemStateSensorReadingsHandler()` | OEM Sensor 讀取 |
-| `oemSetStateEffecterStatesHandler()` | OEM Effecter 設定 |
-| `buildOEMPDR()` | 建造 OEM PDR |
-| `checkBMCState()` | 檢查 BMC 狀態 |
-| `processSetEventReceiver()` | 處理事件接收者設定 |
-| `setSurvTimer()` | 設定監控計時器 |
-| `watchDogRunning()` / `resetWatchDogTimer()` | Watchdog 管理 |
-| `fetchLastBMCRecord()` | 取得最後一筆 BMC PDR |
+| 方法                                               | 說明                 |
+| -------------------------------------------------- | -------------------- |
+| `getOemStateSensorReadingsHandler()`               | OEM Sensor 讀取      |
+| `oemSetStateEffecterStatesHandler()`               | OEM Effecter 設定    |
+| `buildOEMPDR()`                                    | 建造 OEM PDR         |
+| `checkBMCState()`                                  | 檢查 BMC 狀態        |
+| `processSetEventReceiver()`                        | 處理事件接收者設定   |
+| `setSurvTimer()`                                   | 設定監控計時器       |
+| `watchDogRunning()` / `resetWatchDogTimer()`       | Watchdog 管理        |
+| `fetchLastBMCRecord()`                             | 取得最後一筆 BMC PDR |
 | `handleBootTypesAtPowerOn()` / `...AtChassisOff()` | 開關機 Boot 屬性處理 |
 
 ### oem_fru::Handler
@@ -331,35 +335,35 @@ class Handler : public CmdHandler {
 
 ## 原始碼完整結構
 
-| 檔案 | 大小 | 說明 |
-|------|------|------|
-| **Base** | | |
-| `base.cpp/hpp` | 10KB | Base Handler (Type 0) |
-| **Platform** | | |
-| `platform.cpp` | 39KB | Platform Handler 核心實作 |
-| `platform.hpp` | 23KB | Platform Handler 定義（592 行） |
-| `platform_config.cpp/hpp` | 8KB | 平台配置處理 |
-| `platform_numeric_effecter.hpp` | 22KB | Numeric Effecter 操作 |
-| `platform_state_effecter.hpp` | 6.4KB | State Effecter 操作 |
-| `platform_state_sensor.hpp` | 6.9KB | State Sensor 操作 |
-| **BIOS** | | |
-| `bios.cpp/hpp` | 17KB | BIOS Handler (Type 3) |
-| `bios_config.cpp/hpp` | 54KB | BIOS 配置管理 |
-| `bios_table.cpp/hpp` | 25KB | BIOS 表格操作 |
-| `bios_*_attribute.*` | ~45KB | 三種屬性類型 |
-| **FRU** | | |
-| `fru.cpp/hpp` | 42KB | FRU Handler (Type 4) |
-| `fru_parser.cpp/hpp` | 11KB | FRU JSON 解析 |
-| **PDR** | | |
-| `pdr.cpp/hpp` | 2.5KB | PDR 基礎 |
-| `pdr_utils.cpp/hpp` | 16KB | PDR 工具函式 |
-| `pdr_state_sensor.hpp` | 7.3KB | State Sensor PDR 生成 |
-| `pdr_state_effecter.hpp` | 6.9KB | State Effecter PDR 生成 |
-| `pdr_numeric_effecter.hpp` | 10KB | Numeric Effecter PDR 生成 |
-| **事件** | | |
-| `event_parser.cpp/hpp` | 11KB | 事件 JSON 解析 |
-| **OEM** | | |
-| `oem_handler.hpp` | 6.7KB | OEM 擴充介面定義 |
+| 檔案                            | 大小  | 說明                            |
+| ------------------------------- | ----- | ------------------------------- |
+| **Base**                        |       |                                 |
+| `base.cpp/hpp`                  | 10KB  | Base Handler (Type 0)           |
+| **Platform**                    |       |                                 |
+| `platform.cpp`                  | 39KB  | Platform Handler 核心實作       |
+| `platform.hpp`                  | 23KB  | Platform Handler 定義（592 行） |
+| `platform_config.cpp/hpp`       | 8KB   | 平台配置處理                    |
+| `platform_numeric_effecter.hpp` | 22KB  | Numeric Effecter 操作           |
+| `platform_state_effecter.hpp`   | 6.4KB | State Effecter 操作             |
+| `platform_state_sensor.hpp`     | 6.9KB | State Sensor 操作               |
+| **BIOS**                        |       |                                 |
+| `bios.cpp/hpp`                  | 17KB  | BIOS Handler (Type 3)           |
+| `bios_config.cpp/hpp`           | 54KB  | BIOS 配置管理                   |
+| `bios_table.cpp/hpp`            | 25KB  | BIOS 表格操作                   |
+| `bios_*_attribute.*`            | ~45KB | 三種屬性類型                    |
+| **FRU**                         |       |                                 |
+| `fru.cpp/hpp`                   | 42KB  | FRU Handler (Type 4)            |
+| `fru_parser.cpp/hpp`            | 11KB  | FRU JSON 解析                   |
+| **PDR**                         |       |                                 |
+| `pdr.cpp/hpp`                   | 2.5KB | PDR 基礎                        |
+| `pdr_utils.cpp/hpp`             | 16KB  | PDR 工具函式                    |
+| `pdr_state_sensor.hpp`          | 7.3KB | State Sensor PDR 生成           |
+| `pdr_state_effecter.hpp`        | 6.9KB | State Effecter PDR 生成         |
+| `pdr_numeric_effecter.hpp`      | 10KB  | Numeric Effecter PDR 生成       |
+| **事件**                        |       |                                 |
+| `event_parser.cpp/hpp`          | 11KB  | 事件 JSON 解析                  |
+| **OEM**                         |       |                                 |
+| `oem_handler.hpp`               | 6.7KB | OEM 擴充介面定義                |
 
 ---
 
@@ -374,4 +378,4 @@ class Handler : public CmdHandler {
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

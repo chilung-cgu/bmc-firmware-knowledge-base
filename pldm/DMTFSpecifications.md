@@ -117,8 +117,8 @@
 | ------------------------------------ | ---- | -------------------- |
 | GetBIOSTable                         | 0x01 | 取得 BIOS 表格       |
 | SetBIOSTable                         | 0x02 | 設定 BIOS 表格       |
-| GetBIOSAttributeCurrentValueByHandle | 0x07 | 依 Handle 取得屬性值 |
-| SetBIOSAttributeCurrentValue         | 0x08 | 設定屬性值           |
+| SetBIOSAttributeCurrentValue         | 0x07 | 設定屬性值           |
+| GetBIOSAttributeCurrentValueByHandle | 0x08 | 依 Handle 取得屬性值 |
 
 ### 屬性類型
 
@@ -243,14 +243,14 @@ stateDiagram-v2
 
 ## OpenBMC PLDM 規範實作狀態
 
-| 規範                | 狀態      | 備註                       |
-| ------------------- | --------- | -------------------------- |
-| DSP0240 (Base)      | ✅ 完整   | 所有命令已實作             |
-| DSP0247 (BIOS)      | ✅ 完整   | 支援 IBM OEM 擴充          |
-| DSP0248 (Platform)  | ✅ 完整   | PDR/Sensor/Effecter        |
-| DSP0257 (FRU)       | ✅ 完整   | 與 Entity Manager 整合     |
-| DSP0267 (FW Update) | ✅ 完整   | 支援 D-Bus 與 inotify 觸發 |
-| DSP0246 (SMBIOS)    | ❌ 未實作 | -                          |
+| 規範                | 狀態      | 備註                                                              |
+| ------------------- | --------- | ----------------------------------------------------------------- |
+| DSP0240 (Base)      | ✅ 部分   | Responder 處理 GetTID/GetPLDMTypes/GetPLDMVersion/GetPLDMCommands |
+| DSP0247 (BIOS)      | ✅ 完整   | 支援 IBM OEM 擴充                                                 |
+| DSP0248 (Platform)  | ✅ 完整   | PDR/Sensor/Effecter                                               |
+| DSP0257 (FRU)       | ✅ 完整   | 與 Entity Manager 整合                                            |
+| DSP0267 (FW Update) | ✅ 完整   | 支援 D-Bus 與 inotify 觸發                                        |
+| DSP0246 (SMBIOS)    | ❌ 未實作 | -                                                                 |
 
 ---
 

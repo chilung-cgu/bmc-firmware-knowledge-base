@@ -6,11 +6,11 @@ OEM Type 提供廠商自訂的 PLDM 命令與功能擴充機制。
 
 ## 概述
 
-| 欄位 | 值 |
-|------|-----|
-| **Type Code** | 0x3F (63) |
-| **規範** | 廠商自訂 |
-| **功能** | 廠商特定功能 |
+| 欄位          | 值           |
+| ------------- | ------------ |
+| **Type Code** | 0x3F (63)    |
+| **規範**      | 廠商自訂     |
+| **功能**      | 廠商特定功能 |
 
 ---
 
@@ -23,11 +23,11 @@ PLDM 提供兩種 OEM 擴充方式：
 
 ### 命令範圍
 
-| 範圍 | 說明 |
-|------|------|
-| 0x00-0x3F | 標準命令 |
-| 0xF0-0xFE | OEM 命令 (在既有 Type 中) |
-| Type 63 全部 | OEM Type 專用 |
+| 範圍         | 說明                      |
+| ------------ | ------------------------- |
+| 0x00-0x3F    | 標準命令                  |
+| 0xF0-0xFE    | OEM 命令 (在既有 Type 中) |
+| Type 63 全部 | OEM Type 專用             |
 
 ---
 
@@ -37,33 +37,20 @@ PLDM 提供兩種 OEM 擴充方式：
 
 ```
 pldm/oem/
-└── <vendor>/              # 廠商名稱 (小寫)
-    ├── libpldmresponder/  # OEM Handler
-    │   ├── oem_<type>.cpp
-    │   └── oem_<type>.hpp
-    ├── configurations/    # OEM 配置
-    │   ├── bios/          # BIOS 屬性
-    │   └── pdr/           # PDR 配置
-    └── pldmtool/          # OEM pldmtool 命令
-        └── oem_<vendor>_cmd.cpp
+├── ibm/                   # IBM OEM
+│   ├── libpldmresponder/  # OEM Handler
+│   │   ├── oem_ibm_handler.cpp/hpp
+│   │   ├── file_io.cpp/hpp
+│   │   └── ...
+│   ├── configurations/    # OEM 配置
+│   │   └── bios/          # BIOS 屬性
+│   └── pldmtool/          # OEM pldmtool 命令
+│       └── oem_ibm_cmd.cpp
+└── ampere/                # Ampere OEM
+    └── oem_ampere.hpp     # Ampere 初始化
 ```
 
-### 範例：IBM OEM
-
-```
-pldm/oem/ibm/
-├── libpldmresponder/
-│   ├── oem_ibm_handler.cpp
-│   ├── oem_ibm_handler.hpp
-│   ├── file_io.cpp
-│   └── file_table.cpp
-├── configurations/
-│   └── bios/
-│       └── com.ibm.Hardware.Chassis.Model.Rainier2U/
-│           └── bios_attrs.json
-└── pldmtool/
-    └── oem_ibm_cmd.cpp
-```
+> ⚠️ **注意**：upstream `oem/` 目錄僅包含 `ibm/` 和 `ampere/`。其他 OEM（如 Meta、NVIDIA）可能存在於各公司下游分支。
 
 ---
 
@@ -124,19 +111,19 @@ namespace pldm::responder::oem_platform {
 class Handler {
 public:
     virtual ~Handler() = default;
-    
+
     // 處理 OEM 狀態 Effecter
     virtual int setOemEffecter(
         uint16_t effecterId,
         uint8_t compositeEffecterCount,
         const std::vector<set_effecter_state_field>& stateField,
         uint16_t effecterIntf);
-    
+
     // 處理 OEM 事件
     virtual int processOemEvent(uint8_t eventType,
                                 const uint8_t* eventData,
                                 size_t eventDataLen);
-    
+
     // 取得 OEM PDR
     virtual void buildOemPDR(pdr_utils::Repo& repo);
 };
@@ -148,30 +135,18 @@ public:
 
 ## 各廠商 OEM 實作對比
 
-| 功能 | IBM | NVIDIA | Ampere | Meta |
-|------|-----|--------|--------|------|
-| OEM Platform Handler | ✅ 完整 | ✅ 事件處理 | ✅ | ✅ |
-| OEM FRU Handler | ✅ | - | - | - |
-| OEM BIOS Handler | ✅ | - | - | - |
-| OEM Utils Handler | ✅ | - | - | - |
-| File I/O (Type 63) | ✅ | - | - | - |
-| pldmtool 子命令 | ✅ `oem-ibm` | - | - | - |
-| OEM PDR | ✅ | - | ✅ | - |
-| Legacy CPER 事件 | - | ✅ (0xFA) | - | - |
-| Lamp Test | ✅ | - | - | - |
+> ⚠️ **簡化說明**：以下表格僅包含 upstream source code 中實隞存在的 OEM。其他 OEM 可能存在於下游分支。
 
-### NVIDIA OEM 重點
-
-| 項目 | 說明 |
-|------|------|
-| **位置** | `oem/nvidia/oem_nvidia.hpp` |
-| **核心功能** | Legacy CPER 事件向後相容 |
-| **Event Class** | `0xFA`（NVIDIA 自定義，早於 DSP0248 v1.3.0） |
-| **標準 Event Class** | `0x07`（DSP0248 v1.3.0 標準化的 `PLDM_CPER_EVENT`） |
-| **處理方式** | 同時註冊 `registerEventHandlers` 和 `registerPolledEventHandler` |
-| **CPER** | Common Platform Error Record（UEFI 標準錯誤記錄格式） |
-
-> **面試重點**：NVIDIA 的 PLDM OEM 擴充相對精簡，主要處理 CPER 事件的向後相容。這表明 NVIDIA 儘量遵循 DMTF 標準，只在必要時才使用 OEM 擴充。
+| 功能                 | IBM          | Ampere |
+| -------------------- | ------------ | ------ |
+| OEM Platform Handler | ✅ 完整      | ✅     |
+| OEM FRU Handler      | ✅           | -      |
+| OEM BIOS Handler     | ✅           | -      |
+| OEM Utils Handler    | ✅           | -      |
+| File I/O (Type 63)   | ✅           | -      |
+| pldmtool 子命令      | ✅ `oem-ibm` | -      |
+| OEM PDR              | ✅           | ✅     |
+| Lamp Test            | ✅           | -      |
 
 ---
 
@@ -190,16 +165,20 @@ $ pldmtool oem-ibm -h
 ## 建置 OEM 支援
 
 ```bash
-# 啟用 NVIDIA OEM
-meson setup build -Doem-nvidia=enabled
+# 啟用 IBM OEM
+meson setup build -Doem-ibm=enabled
 
-# 僅 NVIDIA（停用其他）
-meson setup build -Doem-ibm=disabled -Doem-ampere=disabled \
-    -Doem-meta=disabled -Doem-nvidia=enabled
+# 啟用 Ampere OEM
+meson setup build -Doem-ampere=enabled
+
+# 停用所有 OEM
+meson setup build -Doem-ibm=disabled -Doem-ampere=disabled
 
 # 建置
 meson compile -C build
 ```
+
+> ⚠️ **注意**：`oem-nvidia` 和 `oem-meta` 不存在於 upstream `meson.options`。若需使用這些 OEM，請參考對應公司的下游分支。
 
 ---
 
@@ -210,4 +189,4 @@ meson compile -C build
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

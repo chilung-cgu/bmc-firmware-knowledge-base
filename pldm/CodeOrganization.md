@@ -16,7 +16,8 @@ pldm/
 ├── host-bmc/                 # Host-BMC 通訊
 ├── softoff/                  # 軟關機
 ├── oem/                      # OEM 擴充
-│   └── <vendor>/             # 廠商目錄
+│   ├── ibm/                  # IBM OEM
+│   └── ampere/               # Ampere OEM
 ├── common/                   # 共用工具
 ├── configurations/           # 配置檔案
 ├── pldmtool/                 # CLI 工具
@@ -42,7 +43,11 @@ PLDM 守護程式主程式，負責：
 ```
 pldmd/
 ├── pldmd.cpp          # 主程式進入點
-├── dbus_impl_*.cpp    # D-Bus 介面實作
+├── handler.hpp        # CmdHandler 基底類別
+├── invoker.hpp        # Invoker 訊息分發器
+├── dbus_impl_pdr.cpp/hpp  # PDR D-Bus 介面實作
+├── oem_ibm.hpp        # IBM OEM 工廠類別
+├── service_files/     # Systemd 服務檔案
 └── meson.build        # 模組建置
 ```
 
@@ -80,14 +85,14 @@ libpldmresponder/
 └── test/                        # 單元測試
 ```
 
-#### Handler 架構
+> ⚠️ **簡化說明**：以下類別圖使用 `CmdHandler` 作為基底類別名稱（與 upstream `pldmd/handler.hpp` 一致）。實際的方法名稱和繼承關係已簡化，僅展示主要 PLDM command handler 的組織架構。
 
 ```mermaid
 classDiagram
-    class Handler {
-        <<interface>>
-        +registerHandlers()
-        +handle(Request) Response
+    class CmdHandler {
+        <<abstract>>
+        +handle(tid, cmd, request, len) Response
+        #handlers: map~Command, HandlerFunc~
     }
 
     class BaseHandler {
@@ -112,10 +117,10 @@ classDiagram
         +setEffecterStates()
     }
 
-    Handler <|-- BaseHandler
-    Handler <|-- BIOSHandler
-    Handler <|-- FRUHandler
-    Handler <|-- PlatformHandler
+    CmdHandler <|-- BaseHandler
+    CmdHandler <|-- BIOSHandler
+    CmdHandler <|-- FRUHandler
+    CmdHandler <|-- PlatformHandler
 ```
 
 ---
@@ -236,11 +241,9 @@ fw-update/
 ├── device_updater.cpp/hpp        # 裝置更新器
 ├── package_parser.cpp/hpp        # 更新封包解析
 ├── activation.cpp/hpp            # 啟動管理
-├── update.cpp/hpp                # 更新介面
 ├── watch.cpp/hpp                 # 檔案監控 (inotify)
 ├── firmware_inventory.cpp/hpp    # 韌體清單
 ├── firmware_inventory_manager.cpp/hpp
-├── aggregate_update_manager.cpp/hpp
 ├── manager.hpp                   # 模組管理器
 └── test/                         # 單元測試
 ```
@@ -283,13 +286,17 @@ OEM 廠商擴充目錄：
 
 ```
 oem/
-└── <vendor>/               # 廠商名稱 (小寫)
-    ├── libpldmresponder/   # OEM Handler
-    │   └── oem_*.cpp/hpp
-    ├── configurations/     # OEM 配置
-    │   └── bios/           # BIOS 屬性 JSON
-    └── pldmtool/           # OEM pldmtool 命令
+├── ibm/                      # IBM OEM
+│   ├── libpldmresponder/     # OEM Handler
+│   │   └── oem_*.cpp/hpp
+│   ├── configurations/       # OEM 配置
+│   │   └── bios/             # BIOS 屬性 JSON
+│   └── pldmtool/             # OEM pldmtool 命令
+└── ampere/                   # Ampere OEM
+    └── oem_ampere.hpp        # Ampere 初始化
 ```
+
+> ⚠️ **注意**：upstream `oem/` 僅有 `ibm/` 和 `ampere/`。其他 OEM（如 Meta）存在於下游分支。
 
 #### 新增 OEM 支援
 

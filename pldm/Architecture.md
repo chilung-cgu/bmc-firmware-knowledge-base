@@ -86,8 +86,10 @@ graph TB
 | **請求管理**   | 追蹤 Instance ID 與請求/回應配對     |
 | **D-Bus 介面** | 提供服務介面給其他 OpenBMC 元件      |
 
+> ⚠️ **概念性說明**：以下 class 不存在於實際 source code。pldmd 是透過 `main()` 函式中的 `Invoker` + `CmdHandler` 實現訊息路由，並非封裝在單一 class 內。詳見 [Pldmd](Pldmd.md)。
+
 ```cpp
-// pldmd 主要職責
+// 概念性簡化 — 實際實作請參考 pldmd/pldmd.cpp 中的 main()
 class Pldmd {
     void registerHandler(PldmType type, Handler handler);
     void handleRequest(mctp_eid_t eid, Request request);
@@ -131,21 +133,16 @@ graph LR
 
 #### Handler 介面
 
+> ⚠️ **簡化說明**：以下 handler 範例簡化了實際的函式簽名。實際的 handler 簽名為 `Response handler(pldm_tid_t tid, const pldm_msg* request, size_t reqMsgLen)`，包含 TID 參數。
+
 ```cpp
-// 標準 Handler 函式簽名
-Response handler(Request payload, size_t payloadLen);
-
-// 範例：GetPLDMTypes Handler
-Response getPLDMTypes(Request request, size_t len) {
+// 簡化編碼/解碼流程範例
+Response getPLDMTypes(pldm_tid_t tid, const pldm_msg* request, size_t len) {
     // 1. 解碼請求 (使用 libpldm)
-    decode_get_types_req(request, len, ...);
-
     // 2. 處理邏輯
     uint8_t types = getSupportedTypes();
-
     // 3. 編碼回應 (使用 libpldm)
     encode_get_types_resp(instanceId, PLDM_SUCCESS, types, response);
-
     return response;
 }
 ```
@@ -296,7 +293,8 @@ pldm/
 ├── host-bmc/                 # Host-BMC 通訊
 ├── softoff/                  # 軟關機功能
 ├── oem/                      # OEM 擴充
-│   └── <vendor>/             # 廠商特定實作
+│   ├── ibm/                  # IBM OEM 實作
+│   └── ampere/               # Ampere OEM 實作
 ├── configurations/           # 配置檔案
 ├── docs/                     # 官方文件
 └── pldmtool/                 # 命令列工具

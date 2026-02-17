@@ -6,10 +6,10 @@ Requester 模組實作 BMC 作為 **PLDM Requester** 的功能——主動向遠
 
 ## 概述
 
-| 項目 | 說明 |
-|------|------|
-| **位置** | `requester/` |
-| **功能** | 請求生命週期管理、重試邏輯、MCTP 端點探索 |
+| 項目         | 說明                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------ |
+| **位置**     | `requester/`                                                                         |
+| **功能**     | 請求生命週期管理、重試邏輯、MCTP 端點探索                                            |
 | **核心檔案** | `handler.hpp`（23KB）、`request.hpp`（6.5KB）、`mctp_endpoint_discovery.cpp`（18KB） |
 
 ---
@@ -118,11 +118,11 @@ Handler(PldmTransport* pldmTransport,
         std::chrono::milliseconds responseTimeOut = 2000ms);  // RESPONSE_TIME_OUT
 ```
 
-| 參數 | Meson 選項 | 預設值 | 說明 |
-|------|-----------|--------|------|
-| `instanceIdExpiryInterval` | `instance-id-expiration-interval` | 5 秒 | Instance ID 過期時間（DSP0240 規定最大 6 秒） |
-| `numRetries` | `number-of-request-retries` | 2 次 | 請求重試次數 |
-| `responseTimeOut` | `response-time-out` | 2000 ms | 單次等待回應超時 |
+| 參數                       | Meson 選項                        | 預設值  | 說明                                          |
+| -------------------------- | --------------------------------- | ------- | --------------------------------------------- |
+| `instanceIdExpiryInterval` | `instance-id-expiration-interval` | 5 秒    | Instance ID 過期時間（DSP0240 規定最大 6 秒） |
+| `numRetries`               | `number-of-request-retries`       | 2 次    | 請求重試次數                                  |
+| `responseTimeOut`          | `response-time-out`               | 2000 ms | 單次等待回應超時                              |
 
 #### 端點訊息佇列（per-EID Queue）
 
@@ -140,19 +140,19 @@ struct EndpointMessageQueue {
 
 #### 主要 API
 
-| 方法 | 說明 |
-|------|------|
-| `registerRequest(eid, instanceId, type, cmd, msg, handler)` | 註冊請求並排入佇列 |
-| `unregisterRequest(eid, instanceId, type, cmd)` | 取消已註冊的請求 |
-| `handleResponse(eid, instanceId, type, cmd, resp, len)` | 處理收到的回應 |
-| `sendRecvMsg(eid, request)` | Coroutine API（C++20 sender/receiver） |
+| 方法                                                        | 說明                                   |
+| ----------------------------------------------------------- | -------------------------------------- |
+| `registerRequest(eid, instanceId, type, cmd, msg, handler)` | 註冊請求並排入佇列                     |
+| `unregisterRequest(eid, instanceId, type, cmd)`             | 取消已註冊的請求                       |
+| `handleResponse(eid, instanceId, type, cmd, resp, len)`     | 處理收到的回應                         |
+| `sendRecvMsg(eid, request)`                                 | Coroutine API（C++20 sender/receiver） |
 
 ### 3. Request — 單一請求封裝
 
 繼承 `RequestRetryTimer`，實作自動重試邏輯：
 
 ```mermaid
-statechart-v2
+stateDiagram-v2
     [*] --> Idle
     Idle --> Sending : start()
     Sending --> WaitingResponse : send() 成功
@@ -221,11 +221,11 @@ auto [rc, resp, len] = co_await handler.sendRecvMsg(eid, std::move(request));
 
 透過 D-Bus 監聽 CodeConstruct mctpd：
 
-| D-Bus 常數 | 值 |
-|-----------|-----|
-| 服務名稱 | `au.com.codeconstruct.MCTP1` |
-| 路徑前綴 | `/au/com/codeconstruct/mctp1` |
-| 端點介面 | `au.com.codeconstruct.MCTP.Endpoint1` |
+| D-Bus 常數     | 值                                        |
+| -------------- | ----------------------------------------- |
+| 服務名稱       | `au.com.codeconstruct.MCTP1`              |
+| 路徑前綴       | `/au/com/codeconstruct/mctp1`             |
+| 端點介面       | `au.com.codeconstruct.MCTP.Endpoint1`     |
 | 篩選 PLDM 支援 | MCTP Message Type = `1`（`mctpTypePLDM`） |
 
 ### D-Bus 信號監聽
@@ -282,12 +282,12 @@ std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
 using MctpInfo = std::tuple<mctp_eid_t, emctpd::UUID, std::string, MctpMedium>;
 ```
 
-| 欄位 | 說明 |
-|------|------|
-| `mctp_eid_t` | MCTP 端點 ID |
-| UUID | 端點 UUID（`xyz.openbmc_project.Common.UUID`） |
-| `std::string` | 端點名稱 |
-| `MctpMedium` | MCTP 傳輸媒體（I2C/I3C 等） |
+| 欄位          | 說明                                           |
+| ------------- | ---------------------------------------------- |
+| `mctp_eid_t`  | MCTP 端點 ID                                   |
+| UUID          | 端點 UUID（`xyz.openbmc_project.Common.UUID`） |
+| `std::string` | 端點名稱                                       |
+| `MctpMedium`  | MCTP 傳輸媒體（I2C/I3C 等）                    |
 
 ### 配置自動關聯
 
@@ -304,13 +304,13 @@ const std::vector<std::string> interfaceFilter = {
 
 ## 原始碼結構
 
-| 檔案 | 大小 | 說明 |
-|------|------|------|
-| `requester/handler.hpp` | 23KB | `Handler` 模板類別，含完整請求生命週期管理 |
-| `requester/request.hpp` | 6.5KB | `RequestRetryTimer` + `Request` 重試邏輯 |
-| `requester/mctp_endpoint_discovery.cpp` | 18KB | MCTP 端點探索實作 |
-| `requester/mctp_endpoint_discovery.hpp` | 8.6KB | MCTP 端點探索標頭 |
-| `requester/README.md` | 1.9KB | 模組說明文件 |
+| 檔案                                    | 大小  | 說明                                       |
+| --------------------------------------- | ----- | ------------------------------------------ |
+| `requester/handler.hpp`                 | 23KB  | `Handler` 模板類別，含完整請求生命週期管理 |
+| `requester/request.hpp`                 | 6.5KB | `RequestRetryTimer` + `Request` 重試邏輯   |
+| `requester/mctp_endpoint_discovery.cpp` | 18KB  | MCTP 端點探索實作                          |
+| `requester/mctp_endpoint_discovery.hpp` | 8.6KB | MCTP 端點探索標頭                          |
+| `requester/README.md`                   | 1.9KB | 模組說明文件                               |
 
 ---
 
@@ -322,4 +322,4 @@ const std::vector<std::string> interfaceFilter = {
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

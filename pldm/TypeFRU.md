@@ -6,11 +6,11 @@ FRU Type 提供 FRU (Field Replaceable Unit) 資料的標準化存取。
 
 ## 概述
 
-| 欄位 | 值 |
-|------|-----|
-| **Type Code** | 0x04 |
-| **規範** | DSP0257 |
-| **功能** | FRU 資料讀取 |
+| 欄位          | 值           |
+| ------------- | ------------ |
+| **Type Code** | 0x04         |
+| **規範**      | DSP0257      |
+| **功能**      | FRU 資料讀取 |
 
 ---
 
@@ -26,7 +26,7 @@ graph TD
     FRU --> RecordSet["FRU Record Set"]
     RecordSet --> General["General Record<br/>一般資訊"]
     RecordSet --> OEM["OEM Record<br/>廠商資訊"]
-    
+
     General --> Fields["Fields"]
     Fields --> Manufacturer["製造商"]
     Fields --> Model["型號"]
@@ -37,32 +37,32 @@ graph TD
 
 ### Record Types
 
-| Type | 名稱 | 說明 |
-|------|------|------|
-| 1 | General FRU Record | 標準 FRU 欄位 |
-| 254 | OEM FRU Record | 廠商自訂欄位 |
+| Type | 名稱               | 說明          |
+| ---- | ------------------ | ------------- |
+| 1    | General FRU Record | 標準 FRU 欄位 |
+| 254  | OEM FRU Record     | 廠商自訂欄位  |
 
 ### Encoding Types
 
-| Encoding | 說明 |
-|----------|------|
-| 0 | Unspecified |
-| 1 | ASCII |
-| 2 | UTF-8 |
-| 3 | UTF-16 |
-| 4 | UTF-16LE |
-| 5 | UTF-16BE |
+| Encoding | 說明        |
+| -------- | ----------- |
+| 0        | Unspecified |
+| 1        | ASCII       |
+| 2        | UTF-8       |
+| 3        | UTF-16      |
+| 4        | UTF-16LE    |
+| 5        | UTF-16BE    |
 
 ---
 
 ## 命令列表
 
-| Command | Code | 說明 |
-|---------|------|------|
+| Command                   | Code | 說明                |
+| ------------------------- | ---- | ------------------- |
 | GetFRURecordTableMetadata | 0x01 | 取得 FRU 表格元資料 |
-| GetFRURecordTable | 0x02 | 取得 FRU 記錄表格 |
-| SetFRURecordTable | 0x03 | 設定 FRU 記錄表格 |
-| GetFRURecordByOption | 0x04 | 依選項取得 FRU 記錄 |
+| GetFRURecordTable         | 0x02 | 取得 FRU 記錄表格   |
+| SetFRURecordTable         | 0x03 | 設定 FRU 記錄表格   |
+| GetFRURecordByOption      | 0x04 | 依選項取得 FRU 記錄 |
 
 ---
 
@@ -72,16 +72,16 @@ graph TD
 
 ### 回應格式
 
-| 欄位 | 大小 | 說明 |
-|------|------|------|
-| Completion Code | 1 byte | |
-| FRU Data Major Version | 1 byte | 主版本號 |
-| FRU Data Minor Version | 1 byte | 次版本號 |
-| FRU Table Maximum Size | 4 bytes | 表格最大大小 |
-| FRU Table Length | 4 bytes | 表格目前大小 |
+| 欄位                         | 大小    | 說明            |
+| ---------------------------- | ------- | --------------- |
+| Completion Code              | 1 byte  |                 |
+| FRU Data Major Version       | 1 byte  | 主版本號        |
+| FRU Data Minor Version       | 1 byte  | 次版本號        |
+| FRU Table Maximum Size       | 4 bytes | 表格最大大小    |
+| FRU Table Length             | 4 bytes | 表格目前大小    |
 | Total Record Set Identifiers | 2 bytes | Record Set 數量 |
-| Total Table Records | 2 bytes | 總記錄數 |
-| Checksum | 4 bytes | CRC32 校驗碼 |
+| Total Table Records          | 2 bytes | 總記錄數        |
+| Checksum                     | 4 bytes | CRC32 校驗碼    |
 
 ### pldmtool 使用
 
@@ -106,10 +106,10 @@ $ pldmtool fru GetFRURecordTableMetadata
 
 ### 請求格式
 
-| 欄位 | 大小 | 說明 |
-|------|------|------|
+| 欄位                 | 大小    | 說明         |
+| -------------------- | ------- | ------------ |
 | Data Transfer Handle | 4 bytes | 傳輸控制代碼 |
-| Transfer Op Flag | 1 byte | 傳輸操作旗標 |
+| Transfer Op Flag     | 1 byte  | 傳輸操作旗標 |
 
 ### pldmtool 使用
 
@@ -161,65 +161,70 @@ pldm/configurations/fru/
 
 ```json
 {
-    "service": "xyz.openbmc_project.Inventory.Manager",
-    "records": [
+  "service": "xyz.openbmc_project.Inventory.Manager",
+  "records": [
+    {
+      "entity_type": 45,
+      "fru_fields": [
         {
-            "entity_type": 45,
-            "fru_fields": [
-                {
-                    "dbus": {
-                        "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
-                        "property_name": "Manufacturer",
-                        "property_type": "string"
-                    },
-                    "fru_field_type": 1
-                },
-                {
-                    "dbus": {
-                        "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
-                        "property_name": "Model",
-                        "property_type": "string"
-                    },
-                    "fru_field_type": 7
-                },
-                {
-                    "dbus": {
-                        "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
-                        "property_name": "PartNumber",
-                        "property_type": "string"
-                    },
-                    "fru_field_type": 2
-                },
-                {
-                    "dbus": {
-                        "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
-                        "property_name": "SerialNumber",
-                        "property_type": "string"
-                    },
-                    "fru_field_type": 3
-                }
-            ]
+          "dbus": {
+            "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
+            "property_name": "Manufacturer",
+            "property_type": "string"
+          },
+          "fru_field_type": 5
+        },
+        {
+          "dbus": {
+            "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
+            "property_name": "Model",
+            "property_type": "string"
+          },
+          "fru_field_type": 2
+        },
+        {
+          "dbus": {
+            "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
+            "property_name": "PartNumber",
+            "property_type": "string"
+          },
+          "fru_field_type": 3
+        },
+        {
+          "dbus": {
+            "interface": "xyz.openbmc_project.Inventory.Decorator.Asset",
+            "property_name": "SerialNumber",
+            "property_type": "string"
+          },
+          "fru_field_type": 4
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
 ### FRU Field Types
 
-| Type | 名稱 |
-|------|------|
-| 1 | Manufacturer |
-| 2 | Part Number |
-| 3 | Serial Number |
-| 4 | Manufacturing Date |
-| 5 | Vendor |
-| 6 | Name |
-| 7 | Model |
-| 8 | Version |
-| 9 | SKU |
-| 10 | Description |
-| 11 | Asset Tag |
-| 12 | Engineering Change Level |
+| Type                     | Code | 名稱          |
+| ------------------------ | ---- | ------------- |
+| Chassis                  | 0x01 | 機箱類型      |
+| Model                    | 0x02 | 型號          |
+| Part Number              | 0x03 | 料號          |
+| Serial Number            | 0x04 | 序號          |
+| Manufacturer             | 0x05 | 製造商        |
+| Manufacturing Date       | 0x06 | 製造日期      |
+| Vendor                   | 0x07 | 供應商        |
+| Name                     | 0x08 | 名稱          |
+| SKU                      | 0x09 | SKU           |
+| Version                  | 0x0A | 版本          |
+| Asset Tag                | 0x0B | 資產標籤      |
+| Description              | 0x0C | 描述          |
+| Engineering Change Level | 0x0D | 工程變更等級  |
+| Other                    | 0x0E | 其他          |
+| IANA                     | 0x0F | IANA 企業編號 |
+
+> **注意**：以上已根據 upstream libpldm `include/libpldm/fru.h` L63-77 驗證。
 
 ---
 
@@ -231,11 +236,11 @@ sequenceDiagram
     participant DBus as D-Bus
     participant PLDM as pldmd
     participant Remote as Remote Terminus
-    
+
     Note over EM,Remote: 初始化
     EM->>DBus: 發布 Inventory 物件
     PLDM->>DBus: 訂閱 Inventory 變更
-    
+
     Note over EM,Remote: FRU 請求
     Remote->>PLDM: GetFRURecordTable
     PLDM->>DBus: 查詢 Inventory 屬性
@@ -270,12 +275,12 @@ sequenceDiagram
 
 ## 原始碼位置
 
-| 檔案 | 說明 |
-|------|------|
-| `libpldmresponder/fru.cpp` | FRU Handler |
-| `libpldmresponder/fru.hpp` | FRU 定義 |
-| `libpldmresponder/fru_parser.cpp` | FRU JSON 解析 |
-| `pldmtool/pldm_fru_cmd.cpp` | pldmtool FRU 命令 |
+| 檔案                              | 說明              |
+| --------------------------------- | ----------------- |
+| `libpldmresponder/fru.cpp`        | FRU Handler       |
+| `libpldmresponder/fru.hpp`        | FRU 定義          |
+| `libpldmresponder/fru_parser.cpp` | FRU JSON 解析     |
+| `pldmtool/pldm_fru_cmd.cpp`       | pldmtool FRU 命令 |
 
 ---
 
@@ -286,4 +291,4 @@ sequenceDiagram
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_
