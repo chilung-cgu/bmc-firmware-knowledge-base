@@ -49,6 +49,19 @@ sequenceDiagram
     MCTP->>Remote: PLDM Response Message
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 BMC 作為 Responder（回應者）處理一筆 PLDM 請求的完整過程：
+>
+> - **步驟 a：接收請求**——遠端裝置透過 MCTP 發送一筆 PLDM 請求給 BMC，mctpd 轉發給 pldmd。
+> - **步驟 b：路由到 Handler**——pldmd 解析 PLDM Type 和 Command，分發給對應的 Handler（像客服中心轉接到對的部門）。
+> - **步驟 c：解碼請求**——Handler 用 libpldm 的 `decode_foo_req()` 將原始位元組解碼成有意義的欄位。
+> - **步驟 d：處理請求**——Handler 執行業務邏輯，可能透過 D-Bus 讀取 Sensor 值、設定屬性等。
+> - **步驟 e：編碼回應**——用 libpldm 的 `encode_foo_resp()` 將結果編碼成 PLDM 回應訊息。
+> - **步驟 f：發送回應**——透過 MCTP 將回應傳回給遠端裝置。
+>
+> **白話總結**：接電話 → 轉接部門 → 聽懂問題 → 查資料 → 組裝答案 → 回覆客戶。
+
 ### 詳細步驟
 
 #### a) 接收 PLDM 請求
@@ -175,6 +188,17 @@ sequenceDiagram
     Req->>App: callback(result)
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 BMC 作為 Requester（請求者）主動發起請求的流程：
+>
+> - **步驟 a：準備請求**——BMC 應用程式呼叫 requester 模組，用 libpldm 的 `encode_foo_req()` 編碼請求。
+> - **步驟 b：發送請求**——requester 將請求透過 pldmd 轉發到 MCTP，再發到遠端裝置。
+> - **步驟 c：接收回應**——遠端裝置處理完畢後回傳 Response。pldmd 透過 Instance ID 匹配到對應的請求，通知 requester 模組。
+> - **步驟 d：處理回應**——requester 用 libpldm 的 `decode_foo_resp()` 解碼回應，然後透過 callback 通知原始呼叫者。
+>
+> **與 Responder 的差異**：Responder 是「接電話」（被動回答），Requester 是「打電話」（主動發問）。注意編解碼的方向相反：Requester 先編碼 request 再解碼 response，Responder 先解碼 request 再編碼 response。
+
 ### 詳細步驟
 
 #### a) 準備請求訊息
@@ -276,6 +300,16 @@ flowchart TD
     Ready --> Serve["回應 GetPDR 請求"]
 ```
 
+> **逐步說明：**
+>
+> 1. **pldmd 啟動**：守護程式起始化。
+> 2. **載入 PDR JSON**：從 `configurations/*.json` 檔讀取 PDR 定義。這些 JSON 檔定義了 BMC 內部的 Sensor、Effecter 等硬體描述。
+> 3. **解析並建立 Repository**：將 JSON 轉換成 PDR 資料結構，存入記憶體中的 Repository。
+> 4. **（分支）Host PDR**：如果需要 Host 的 PDR（例如 CPU 的 Sensor 描述），則從 Host 取得並合併到 Repository 中。
+> 5. **準備就緒**：Repository 建立完成，可以回應外部的 `GetPDR` 請求。
+>
+> **白話總結**：就像開店前準備「商品型錄」——先從配置檔讀取商品資訊，必要時從總公司（Host）拿更多資料，然後就可以回答客戶的查詢。
+
 ### platform-mc 端 PDR 拉取
 
 當 BMC 作為 Requester 從遠端 Terminus 拉回 PDR 時：
@@ -292,6 +326,20 @@ flowchart TD
     Parse --> EventCfg["SetEventReceiver"]
     EventCfg --> Poll["startSensorPolling(tid)"]
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 BMC 從遠端 Terminus 剿回 PDR 的完整流程：
+>
+> 1. **MCTP 端點探索**：mctpd 發現新的 MCTP 端點，通知 pldmd。
+> 2. **初始化 Terminus**：TerminusManager 對新端點執行 `GetTID`（取得 Terminus ID）和 `GetPLDMTypes`（查詢支援的類型）。
+> 3. **取得 FRU 資料**：先取得裝置的 FRU 資訊（型號、序號等）。
+> 4. **拉取 PDR**：透過 `GetPDRRepositoryInfo` 和 `GetPDR` 命令迭代取得所有 PDR（平台描述記錄），了解裝置有哪些 Sensor 和 Effecter。
+> 5. **解析 PDR**：將取得的 PDR 解析成內部資料結構（Sensor 物件等）。
+> 6. **註冊事件接收者**：用 `SetEventReceiver` 告訴裝置：「有事件請通知我」。
+> 7. **開始 Sensor 輪詢**：定期讀取裝置的 Sensor 值。
+>
+> **白話總結**：就像認識新同事——先問名字（TID）、再問會什麼（Types）、查履歷（FRU）、了解能力（PDR）、訂閱通知（SetEventReceiver）、開始合作（Polling）。
 
 ### PDR JSON 格式
 
@@ -354,6 +402,20 @@ sequenceDiagram
 
     pldmd->>Device: Response (Acknowledged)
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 PLDM 事件處理的完整流程：
+>
+> 1. **事件接收者註冊**：pldmd 用 `SetEventReceiver` 告訴裝置：「有事件請發給我（BMC）」。裝置確認接受。
+> 2. **事件發生**：當裝置有事件發生（例如溫度超過閾值），它透過 `PlatformEventMessage` 主動通知 pldmd。
+> 3. **解析事件類型**：Event Manager 判斷事件是什麼類型：
+>    - **Sensor 事件**：更新 D-Bus 上的 Sensor 值或狀態（其他服務可以讀到）
+>    - **Effecter 事件**：更新 Effecter 狀態（如風扇速度）
+>    - **PLDM Log**：記錄事件日誌
+> 4. **確認回應**：pldmd 發送 Response 給裝置，表示「我已收到事件」。
+>
+> **白話總結**：就像訂閱通知——先告訴裝置「有事情請通知我」，裝置就會在有狀況時主動通知 BMC，BMC 收到後更新系統狀態。
 
 ---
 

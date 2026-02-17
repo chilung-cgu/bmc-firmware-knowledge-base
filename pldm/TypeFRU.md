@@ -35,6 +35,18 @@ graph TD
     Fields --> Version["版本"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 FRU 的層次結構：
+>
+> - **FRU**：一個可替換單元（如一片主機板、一個電源供應器）。
+> - **FRU Record Set**：一組描述這個 FRU 的記錄，包含：
+>   - **General Record**：標準資訊（每個 FRU 都有）
+>   - **OEM Record**：廠商自訂資訊（可選）
+> - **Fields**：General Record 裡的具體欄位：製造商、型號、料號、序號、版本。
+>
+> **白話總結**：FRU 就像商品的「身分證」——記錄了誰製造的、什麼型號、序號是多少等重要資訊。
+
 ### Record Types
 
 | Type | 名稱               | 說明          |
@@ -248,6 +260,19 @@ sequenceDiagram
     PLDM->>PLDM: 建立 FRU Record
     PLDM-->>Remote: FRU Record Table
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 FRU 如何與 OpenBMC 的 Entity Manager 整合：
+>
+> **初始化**：
+>
+> 1. Entity Manager 在 D-Bus 上發佈 Inventory 物件（包含硬體的製造商、型號等）。
+> 2. pldmd 訂閱 Inventory 變更，保持同步。
+>
+> **FRU 請求**：3. 當遠端 Terminus 發送 `GetFRURecordTable` 時，pldmd 透過 D-Bus 查詢 Entity Manager 的 Inventory 屬性。4. 將屬性値組裝成 PLDM FRU Record 格式，回傳給遠端 Terminus。
+>
+> **白話總結**：Entity Manager 持有硬體資訊，pldmd 充當「翻譯官」，將 D-Bus 格式的硬體資訊轉換成 PLDM FRU 格式回給請求者。
 
 ---
 

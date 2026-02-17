@@ -145,6 +145,14 @@ sequenceDiagram
     mctpd-->>Client: (eid=12, net=1, path, new=true)
 ```
 
+> **逐步說明：**
+>
+> 1. **Client 呼叫 AssignEndpoint**：傳入橋接器的硬體位址，請 mctpd 設定這個裝置。
+> 2. **分配 EID 並發現橋接器身份**：mctpd 發送 `Set Endpoint ID` 給裝置。裝置在回應中透露自己是「橋接器」（endpoint_type=Bridge），同時請求一個 EID 池（pool_size_request=11 表示後面有 11 個下游裝置需要 EID）。
+> 3. **從動態範圍分配 EID 池**：mctpd 檢查配置的 `dynamic_eid_range`（例如 [8, 254]），找到連續的 11 個空閒 EID（50-60），透過 `Allocate Endpoint IDs` 分配給橋接器。
+> 4. **建立基礎設施**：mctpd 建立 D-Bus 端點物件（含 Bridge1 介面），並在 kernel 設定閘道路由——告訴 kernel「發給 EID 50-60 的封包，都透過 EID 12 轉發」。
+> 5. **回傳結果**：回傳橋接器的 EID=12。後續可用 `Network.LearnEndpoint` 逐一發現 EID 50-60 的下游端點。
+
 ### 池大小限制
 
 mctpd 會限制橋接器可請求的最大池大小：

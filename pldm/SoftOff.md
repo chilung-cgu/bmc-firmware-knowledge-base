@@ -6,13 +6,13 @@ SoftOff 模組實作 PLDM 軟關機功能——透過 PLDM `SetStateEffecterStat
 
 ## 概述
 
-| 項目 | 說明 |
-|------|------|
-| **執行檔** | `/usr/bin/pldm-softpoweroff` |
-| **服務** | `pldm-softpoweroff.service` |
-| **位置** | `softoff/` |
-| **核心類別** | `SoftPowerOff` |
-| **原始碼** | `softoff.cpp`（14KB）、`main.cpp`（2KB） |
+| 項目         | 說明                                     |
+| ------------ | ---------------------------------------- |
+| **執行檔**   | `/usr/bin/pldm-softpoweroff`             |
+| **服務**     | `pldm-softpoweroff.service`              |
+| **位置**     | `softoff/`                               |
+| **核心類別** | `SoftPowerOff`                           |
+| **原始碼**   | `softoff.cpp`（14KB）、`main.cpp`（2KB） |
 
 ---
 
@@ -56,6 +56,19 @@ sequenceDiagram
         end
     end
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 PLDM 軟關機的完整流程：
+>
+> 1. **Systemd 啟動服務**：當使用者請求關機時，systemd 啟動 `pldm-softpoweroff.service`。
+> 2. **檢查 Host 狀態**：如果 Host 不在運行，直接退出（不需關機）。
+> 3. **從 PDR 查找 Effecter 和 Sensor**：在 PDR Repository 中搜尋「軟關機」對應的 Effecter ID 和 Sensor ID。
+> 4. **發送關機命令**：透過 `SetStateEffecterStates` 告訴 Host：「請優雅關機」。
+> 5. **啟動計時器並等待**：監聽 D-Bus 的 StateSensorEvent 信號，等待 Host 回報關機完成。
+> 6. **結果**：收到關機完成信號→成功退出；超時→退出（可能需要強制關機）。
+>
+> **白話總結**：就像按電腦的「關機」按鈕——告訴作業系統「請儲存並關機」，等它完成，如果太久沒回應就超時。
 
 ---
 
@@ -164,7 +177,7 @@ int getSensorInfo(EntityType& entityType, StateSetId& stateSetId) {
 ```json
 // softoff 配置檔（路徑在 parseConfig() 中定義）
 {
-    "softoff_timeout_seconds": 30
+  "softoff_timeout_seconds": 30
 }
 ```
 
@@ -191,19 +204,30 @@ graph LR
     User["使用者<br/>請求關機"] --> PowerMgr["phosphor-state-manager<br/>Host Power Off"]
     PowerMgr --> SoftOff["pldm-softpoweroff<br/>PLDM 軟關機"]
     SoftOff --> Host["Host 優雅關機"]
-    Host --> Done["Host 已關閉"]
+    Host --> Done["最後 Host 已關閉"]
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 PLDM 軟關機在 OpenBMC 關機流程中的位置：
+>
+> 1. 使用者請求關機（透過 Redfish/IPMI/Web UI）。
+> 2. phosphor-state-manager 接收請求，啟動 pldm-softpoweroff。
+> 3. pldm-softpoweroff 透過 PLDM 告訴 Host 「請優雅關機」。
+> 4. Host 完成關機。
+>
+> **白話總結**：PLDM 軟關機是 OpenBMC 關機鏈中的一環，負責「很有禮貌地」請 Host 關機。
 
 ---
 
 ## 原始碼結構
 
-| 檔案 | 大小 | 說明 |
-|------|------|------|
-| `softoff.cpp` | 14KB | SoftPowerOff 實作 |
-| `softoff.hpp` | 4.4KB | SoftPowerOff 定義 |
-| `main.cpp` | 2KB | 主程式入口 |
-| `softoff.service` | — | Systemd 服務檔案 |
+| 檔案              | 大小  | 說明              |
+| ----------------- | ----- | ----------------- |
+| `softoff.cpp`     | 14KB  | SoftPowerOff 實作 |
+| `softoff.hpp`     | 4.4KB | SoftPowerOff 定義 |
+| `main.cpp`        | 2KB   | 主程式入口        |
+| `softoff.service` | —     | Systemd 服務檔案  |
 
 ---
 
@@ -215,4 +239,4 @@ graph LR
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

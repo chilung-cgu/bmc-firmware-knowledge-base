@@ -11,6 +11,7 @@
 ```
 
 **範例**：
+
 - `/au/com/codeconstruct/mctp1/interfaces/mctpi2c1`
 - `/au/com/codeconstruct/mctp1/interfaces/mctpi2c2`
 
@@ -33,10 +34,10 @@ au.com.codeconstruct.MCTP.Interface1 interface -         -            -
 
 #### NetworkId
 
-| 項目 | 值 |
-|------|-----|
-| **型別** | `u` (uint32) |
-| **存取** | 唯讀 |
+| 項目     | 值              |
+| -------- | --------------- |
+| **型別** | `u` (uint32)    |
+| **存取** | 唯讀            |
 | **訊號** | PropertyChanged |
 
 此介面所屬的 MCTP 網路 ID。
@@ -52,23 +53,24 @@ u 1
 
 #### Role
 
-| 項目 | 值 |
-|------|-----|
-| **型別** | `s` (string) |
-| **存取** | 讀寫（有條件） |
+| 項目     | 值              |
+| -------- | --------------- |
+| **型別** | `s` (string)    |
+| **存取** | 讀寫（有條件）  |
 | **訊號** | PropertyChanged |
 
 介面在 MCTP 網路中的角色。
 
 **可能的值**：
 
-| 值 | 說明 |
-|-----|------|
+| 值           | 說明                 |
+| ------------ | -------------------- |
 | `"BusOwner"` | 此介面是匯流排擁有者 |
-| `"Endpoint"` | 此介面是普通端點 |
-| `"Unknown"` | 尚未配置 |
+| `"Endpoint"` | 此介面是普通端點     |
+| `"Unknown"`  | 尚未配置             |
 
 **寫入限制**：
+
 - 只有當 Role 為 `"Unknown"` 時才能寫入
 - 一旦設定為 `"BusOwner"` 或 `"Endpoint"`，不可更改
 
@@ -112,12 +114,13 @@ au.com.codeconstruct.MCTP.BusOwner1  interface -         -            -
 
 最常用的端點設定方法。查詢端點的現有 EID，若無則分配新的。
 
-| 項目 | 值 |
-|------|-----|
-| **輸入** | `ay` - 硬體地址（byte array） |
+| 項目     | 值                                       |
+| -------- | ---------------------------------------- |
+| **輸入** | `ay` - 硬體地址（byte array）            |
 | **輸出** | `yisb` - (EID, 網路ID, 路徑, 是否新分配) |
 
 **流程**：
+
 1. 發送 Get Endpoint ID 命令
 2. 如果端點有有效 EID，使用現有 EID
 3. 如果端點無 EID，分配新 EID 並發送 Set Endpoint ID
@@ -137,6 +140,7 @@ yisb 10 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/10" true
 ```
 
 **輸出說明**：
+
 - `y 10` - 分配的 EID
 - `i 1` - 網路 ID
 - `s "..."` - 端點 D-Bus 物件路徑
@@ -146,12 +150,13 @@ yisb 10 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/10" true
 
 總是分配新的 EID，不查詢現有 EID。
 
-| 項目 | 值 |
-|------|-----|
-| **輸入** | `ay` - 硬體地址（byte array） |
+| 項目     | 值                                       |
+| -------- | ---------------------------------------- |
+| **輸入** | `ay` - 硬體地址（byte array）            |
 | **輸出** | `yisb` - (EID, 網路ID, 路徑, 是否新分配) |
 
 **與 SetupEndpoint 的差異**：
+
 - 不查詢端點現有 EID
 - 總是發送 Set Endpoint ID 命令
 - 如果端點已知，回傳 `new = false`
@@ -167,6 +172,7 @@ yisb 10 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/10" true
 ```
 
 **橋接器處理**：
+
 - 如果 Set Endpoint ID 回應表明是橋接器（請求 EID 池）
 - mctpd 會嘗試從動態範圍分配連續的 EID 池
 - 使用 Allocate Endpoint IDs 命令傳遞池資訊
@@ -175,9 +181,9 @@ yisb 10 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/10" true
 
 分配指定的靜態 EID。
 
-| 項目 | 值 |
-|------|-----|
-| **輸入** | `ayy` - 硬體地址 + 指定 EID |
+| 項目     | 值                                       |
+| -------- | ---------------------------------------- |
+| **輸入** | `ayy` - 硬體地址 + 指定 EID              |
 | **輸出** | `yisb` - (EID, 網路ID, 路徑, 是否新分配) |
 
 **使用範例**：
@@ -192,6 +198,7 @@ yisb 20 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/20" true
 ```
 
 **錯誤情況**：
+
 - 如果端點已有不同的 EID，呼叫失敗
 - 如果指定的 EID 已被其他端點使用，呼叫失敗
 
@@ -199,12 +206,13 @@ yisb 20 1 "/au/com/codeconstruct/mctp1/networks/1/endpoints/20" true
 
 僅查詢端點的現有 EID，不分配新 EID。
 
-| 項目 | 值 |
-|------|-----|
-| **輸入** | `ay` - 硬體地址（byte array） |
+| 項目     | 值                                       |
+| -------- | ---------------------------------------- |
+| **輸入** | `ay` - 硬體地址（byte array）            |
 | **輸出** | `yisb` - (EID, 網路ID, 路徑, 是否新發現) |
 
 **與 SetupEndpoint 的差異**：
+
 - 不發送 Set Endpoint ID
 - 如果端點無有效 EID，呼叫失敗
 - 適用於端點已有 EID 的情況
@@ -253,31 +261,48 @@ busctl call ... SetupEndpoint ay 1 0x1d
 ```mermaid
 graph TD
     A[需要設定端點] --> B{端點是否已有 EID？}
-    
+
     B -->|不確定| C[SetupEndpoint]
     B -->|已有| D{是否已知具體 EID？}
     B -->|無| E{需要特定 EID？}
-    
+
     D -->|是| F[LearnEndpoint on Network]
     D -->|否| G[LearnEndpoint on Interface]
-    
+
     E -->|是| H[AssignEndpointStatic]
     E -->|否| I[AssignEndpoint]
-    
+
     C --> J[查詢現有，必要時分配]
     G --> K[僅查詢，不分配]
     H --> L[分配指定 EID]
     I --> M[總是分配新 EID]
 ```
 
+> **逐步說明（決策樹）：**
+>
+> 這張圖幫你決定該使用哪個 BusOwner1 方法：
+>
+> 1. **先問：端點是否已有 EID？**
+>    - **不確定** → 用 `SetupEndpoint`（最安全的選擇，先查再說）
+>    - **已有 EID** → 看你是否知道具體的 EID 編號
+>    - **確定沒有 EID** → 往下看
+> 2. **已有 EID 時**：
+>    - 知道具體 EID → 用 `Network.LearnEndpoint`（適合橋接下游）
+>    - 不知道具體 EID → 用 `Interface.LearnEndpoint`（透過硬體位址查詢）
+> 3. **沒有 EID 時**：
+>    - 需要特定 EID → 用 `AssignEndpointStatic`
+>    - 不需要特定 EID → 用 `AssignEndpoint`（mctpd 自動分配）
+>
+> **最常用的選擇**：大多數情況下用 `SetupEndpoint` 就夠了，它會自動處理「有 EID 就用、沒有就分配」的邏輯。
+
 ### 建議使用場景
 
-| 方法 | 使用場景 |
-|------|----------|
-| **SetupEndpoint** | 一般端點發現，適用於大多數情況 |
-| **AssignEndpoint** | 橋接器設定，或需要確保新 EID |
-| **AssignEndpointStatic** | 需要特定 EID 對應（如靜態配置） |
-| **LearnEndpoint** | 端點已有 EID，僅需發現（如橋接下游） |
+| 方法                     | 使用場景                             |
+| ------------------------ | ------------------------------------ |
+| **SetupEndpoint**        | 一般端點發現，適用於大多數情況       |
+| **AssignEndpoint**       | 橋接器設定，或需要確保新 EID         |
+| **AssignEndpointStatic** | 需要特定 EID 對應（如靜態配置）      |
+| **LearnEndpoint**        | 端點已有 EID，僅需發現（如橋接下游） |
 
 ---
 
@@ -285,11 +310,11 @@ graph TD
 
 ### 常見錯誤
 
-| 錯誤 | 說明 | 解決方案 |
-|------|------|----------|
-| `org.freedesktop.DBus.Error.Failed` | 通用錯誤 | 檢查日誌詳情 |
-| `No response` | 端點無回應 | 檢查硬體連接 |
-| `EID conflict` | EID 衝突 | 使用其他 EID 或 AssignEndpoint |
+| 錯誤                                | 說明       | 解決方案                       |
+| ----------------------------------- | ---------- | ------------------------------ |
+| `org.freedesktop.DBus.Error.Failed` | 通用錯誤   | 檢查日誌詳情                   |
+| `No response`                       | 端點無回應 | 檢查硬體連接                   |
+| `EID conflict`                      | EID 衝突   | 使用其他 EID 或 AssignEndpoint |
 
 ### 超時處理
 
@@ -311,7 +336,7 @@ int setup_endpoint(sd_bus *bus, uint8_t hwaddr) {
     int32_t net;
     const char *path;
     int new_endpoint;
-    
+
     int r = sd_bus_call_method(
         bus,
         "au.com.codeconstruct.MCTP1",
@@ -321,14 +346,14 @@ int setup_endpoint(sd_bus *bus, uint8_t hwaddr) {
         &error,
         &reply,
         "ay", 1, &hwaddr);
-    
+
     if (r < 0)
         return r;
-    
+
     r = sd_bus_message_read(reply, "yisb", &eid, &net, &path, &new_endpoint);
-    
+
     printf("EID: %d, Net: %d, Path: %s, New: %d\n", eid, net, path, new_endpoint);
-    
+
     sd_bus_message_unref(reply);
     return 0;
 }

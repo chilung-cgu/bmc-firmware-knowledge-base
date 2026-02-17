@@ -81,6 +81,16 @@ sequenceDiagram
     Bridge-->>mctpd: Response<br/>completion_code=0<br/>endpoint_type=Bridge<br/>pool_size_request=11
 ```
 
+> **逐步說明：**
+>
+> 1. **mctpd 發送 Set Endpoint ID**：mctpd 用 `Force` 操作強制分配 EID=12 給橋接器。`Force` 表示不管裝置原來有沒有 EID，都覆蓋為新值。
+> 2. **橋接器接受並請求 EID 池**：橋接器的回應包含三個關鍵資訊：
+>    - `completion_code=0`：成功接受 EID。
+>    - `endpoint_type=Bridge`：告訴 mctpd 「我是橋接器，不是普通端點」。
+>    - `pool_size_request=11`：「我後面連接了 11 個下游裝置，需要 11 個 EID」。
+>
+> **為什麼這很重要**：這個回應讓 mctpd 知道這不是普通裝置，而是橋接器，後續需要特殊處理（分配 EID 池、建立閘道路由）。
+
 ### 3. EID 池分配
 
 mctpd 從動態範圍分配連續的 EID 池：
@@ -100,6 +110,13 @@ sequenceDiagram
 
     Note over mctpd: 建立閘道路由<br/>50-60 via 12
 ```
+
+> **逐步說明：**
+>
+> 1. **檢查動態 EID 範圍**：mctpd 查看配置檔中的 `dynamic_eid_range`（預設 [8, 254]），找出空閒的 EID 區段。
+> 2. **尋找連續空閒 EID**：mctpd 需要找到「連續」的 11 個空閒 EID（不能有間斷），例如 50-60。如果找不到足夠大的連續區段，分配會失敗。
+> 3. **發送 Allocate Endpoint IDs**：mctpd 告訴橋接器：「你的下游裝置可以使用 EID 50-60 這個範圍」。
+> 4. **建立閘道路由**：mctpd 在 kernel 中建立閘道路由：「發給 EID 50-60 的封包，都經過 EID 12（橋接器）轉發」。這就像 TCP/IP 中的：「發給 192.168.2.x 的封包，經過 192.168.1.1 閘道」。
 
 ### 4. 路由設定
 
@@ -294,6 +311,15 @@ sequenceDiagram
     Endpoint-->>Bridge: Response (dest=8)
     Bridge-->>BMC: Response
 ```
+
+> **逐步說明：**
+>
+> 1. **BMC 查詢路由**：BMC 想發訊息給 EID 50。Kernel 查路由表，發現「EID 50 走 gateway 12」。
+> 2. **封包發到橋接器**：BMC 先把封包發給橋接器（EID 12），封包中的目的地址是 EID 50。
+> 3. **橋接器轉發**：橋接器收到封包後，看到目的地是 EID 50（不是自己），就在自己的下游網路中查找 EID 50 並轉發過去。
+> 4. **回應路徑相同**：下游端點回應時，封包的目的地是 BMC（EID 8），橋接器會將它轉發回 BMC。
+>
+> **白話總結**：這就像寤家服務——你只需把包裹交給轉運站（橋接器），轉運站會幫你送到最終目的地。
 
 ### 控制訊息
 

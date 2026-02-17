@@ -131,6 +131,8 @@ graph LR
     Attr --> Password["Password<br/>密碼"]
 ```
 
+> **逐步說明**：BIOS 屬性分為四種類型：Enumeration（多選一）、String（字串）、Integer（整數）、Password（密碼）。每種類型有不同的約束和驗證規則。
+
 ### 下載連結
 
 - [DSP0247 1.0.0 (PDF)](https://www.dmtf.org/sites/default/files/standards/documents/DSP0247_1.0.0.pdf)
@@ -192,6 +194,8 @@ graph TB
     State --> Operational["Operational State"]
 ```
 
+> **逐步說明**：Sensor 分為兩大類：**Numeric**（數值型，如溫度、電壓、功率）和 **State**（狀態型，如存在/不存在、健康/不健康、運行中/停止）。Numeric Sensor 回傳數字，State Sensor 回傳狀態列舉值。
+
 ### 下載連結
 
 - [DSP0248 1.3.0 (PDF)](https://www.dmtf.org/sites/default/files/standards/documents/DSP0248_1.3.0.pdf)
@@ -222,6 +226,10 @@ stateDiagram-v2
     ACTIVATE --> IDLE: Success
     ACTIVATE --> [*]: Failure
 ```
+
+> **逐步說明（狀態機）**：
+>
+> IDLE → LEARN_COMPONENTS（查詢裝置）→ READY_XFER（取得韌體參數）→ DOWNLOAD（請求更新）→ VERIFY（傳遞元件表）→ APPLY（更新元件）→ ACTIVATE（搯用韌體）。這是 DSP0267 定義的標準狀態機。
 
 ### FW Update 命令
 

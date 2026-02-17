@@ -10,12 +10,12 @@
 
 ### 設計目標
 
-| 目標 | 說明 |
-|------|------|
-| **媒體獨立** | 可在多種實體傳輸層上運行（I2C、PCIe、USB、Serial） |
-| **低開銷** | 簡化的協議設計，適合嵌入式系統和 BMC 韌體 |
-| **標準化** | 提供一致的傳輸層給各種管理協議（PLDM、SPDM、NVMe-MI） |
-| **可擴展** | 支援多種訊息類型和自定義供應商訊息 |
+| 目標         | 說明                                                  |
+| ------------ | ----------------------------------------------------- |
+| **媒體獨立** | 可在多種實體傳輸層上運行（I2C、PCIe、USB、Serial）    |
+| **低開銷**   | 簡化的協議設計，適合嵌入式系統和 BMC 韌體             |
+| **標準化**   | 提供一致的傳輸層給各種管理協議（PLDM、SPDM、NVMe-MI） |
+| **可擴展**   | 支援多種訊息類型和自定義供應商訊息                    |
 
 ### 主要特點
 
@@ -79,11 +79,11 @@ EID（Endpoint ID）是 MCTP 網路中用於識別端點的 8-bit 地址：
 
 MCTP 端點可以具有以下角色：
 
-| 角色 | 說明 |
-|------|------|
-| **Bus Owner** | 匯流排擁有者，負責分配 EID、管理網路 |
-| **Endpoint** | 普通端點，接受 bus owner 分配的 EID |
-| **Bridge** | 橋接器，連接兩個 MCTP 網路，可擁有下游 EID 池 |
+| 角色          | 說明                                          |
+| ------------- | --------------------------------------------- |
+| **Bus Owner** | 匯流排擁有者，負責分配 EID、管理網路          |
+| **Endpoint**  | 普通端點，接受 bus owner 分配的 EID           |
+| **Bridge**    | 橋接器，連接兩個 MCTP 網路，可擁有下游 EID 池 |
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -134,16 +134,16 @@ MCTP 端點可以具有以下角色：
 
 MCTP 支援多種訊息類型：
 
-| 類型碼 | 訊息類型 | 說明 |
-|--------|----------|------|
-| 0x00 | Control Messages | MCTP 控制協議訊息 |
-| 0x01 | PLDM | Platform Level Data Model |
-| 0x02 | NC-SI | Network Controller Sideband Interface |
-| 0x03 | Ethernet | MCTP over Ethernet |
-| 0x04 | NVMe-MI | NVMe Management Interface |
-| 0x05 | SPDM | Security Protocol and Data Model |
-| 0x7E | Vendor Defined (PCI) | 供應商定義（PCI VID） |
-| 0x7F | Vendor Defined (IANA) | 供應商定義（IANA ID） |
+| 類型碼 | 訊息類型              | 說明                                  |
+| ------ | --------------------- | ------------------------------------- |
+| 0x00   | Control Messages      | MCTP 控制協議訊息                     |
+| 0x01   | PLDM                  | Platform Level Data Model             |
+| 0x02   | NC-SI                 | Network Controller Sideband Interface |
+| 0x03   | Ethernet              | MCTP over Ethernet                    |
+| 0x04   | NVMe-MI               | NVMe Management Interface             |
+| 0x05   | SPDM                  | Security Protocol and Data Model      |
+| 0x7E   | Vendor Defined (PCI)  | 供應商定義（PCI VID）                 |
+| 0x7F   | Vendor Defined (IANA) | 供應商定義（IANA ID）                 |
 
 ---
 
@@ -153,28 +153,28 @@ MCTP 控制協議（Message Type 0x00）用於網路管理和端點發現：
 
 ### 控制命令
 
-| 命令碼 | 命令名稱 | 說明 |
-|--------|----------|------|
-| 0x01 | Set Endpoint ID | 設定端點 EID |
-| 0x02 | Get Endpoint ID | 查詢端點 EID |
-| 0x03 | Get Endpoint UUID | 查詢端點 UUID |
-| 0x04 | Get MCTP Version Support | 查詢支援的 MCTP 版本 |
-| 0x05 | Get Message Type Support | 查詢支援的訊息類型 |
-| 0x06 | Get Vendor Defined Msg Support | 查詢供應商定義訊息支援 |
-| 0x07 | Resolve Endpoint ID | 解析 EID |
-| 0x08 | Allocate Endpoint IDs | 分配 EID 池（給橋接器） |
-| 0x0C | Prepare for Endpoint Discovery | 準備端點發現 |
-| 0x0D | Endpoint Discovery | 執行端點發現 |
-| 0x0E | Discovery Notify | 發現通知 |
+| 命令碼 | 命令名稱                       | 說明                    |
+| ------ | ------------------------------ | ----------------------- |
+| 0x01   | Set Endpoint ID                | 設定端點 EID            |
+| 0x02   | Get Endpoint ID                | 查詢端點 EID            |
+| 0x03   | Get Endpoint UUID              | 查詢端點 UUID           |
+| 0x04   | Get MCTP Version Support       | 查詢支援的 MCTP 版本    |
+| 0x05   | Get Message Type Support       | 查詢支援的訊息類型      |
+| 0x06   | Get Vendor Defined Msg Support | 查詢供應商定義訊息支援  |
+| 0x07   | Resolve Endpoint ID            | 解析 EID                |
+| 0x08   | Allocate Endpoint IDs          | 分配 EID 池（給橋接器） |
+| 0x0C   | Prepare for Endpoint Discovery | 準備端點發現            |
+| 0x0D   | Endpoint Discovery             | 執行端點發現            |
+| 0x0E   | Discovery Notify               | 發現通知                |
 
 ### Set Endpoint ID 操作類型
 
-| 操作 | 說明 |
-|------|------|
-| Set EID | 設定端點的 EID |
-| Force EID | 強制設定，即使端點已有 EID |
-| Reset EID | 重置為 Null EID |
-| Set Discovered | 標記為已發現狀態 |
+| 操作           | 說明                       |
+| -------------- | -------------------------- |
+| Set EID        | 設定端點的 EID             |
+| Force EID      | 強制設定，即使端點已有 EID |
+| Reset EID      | 重置為 Null EID            |
+| Set Discovered | 標記為已發現狀態           |
 
 ---
 
@@ -246,25 +246,35 @@ graph TB
         SPDM[SPDM<br/>Security Protocol]
         NVMe[NVMe-MI<br/>NVMe Management]
     end
-    
+
     subgraph "Transport Layer"
         MCTP[MCTP<br/>Management Component<br/>Transport Protocol]
     end
-    
+
     subgraph "Physical Bindings"
         I2C[I2C/SMBus]
         PCIe[PCIe VDM]
         USB[USB]
     end
-    
+
     PLDM --> MCTP
     SPDM --> MCTP
     NVMe --> MCTP
-    
+
     MCTP --> I2C
     MCTP --> PCIe
     MCTP --> USB
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 MCTP 在整個系統中的「三明治」位置：
+>
+> - **上層（Higher-Level Protocols）**：應用層協議，例如 PLDM（平台管理）、SPDM（安全認證）、NVMe-MI（NVMe 管理）。這些協議定義「要做什麼」（如讀取溫度、更新韌體）。
+> - **中層（Transport Layer）**：就是 MCTP 本身。它是一個「通用信封」——不管上層是 PLDM 還是 NVMe-MI，都裝進同一種 MCTP 封包裡傳輸。
+> - **下層（Physical Bindings）**：實體傳輸方式。MCTP 封包可以透過 I2C/SMBus、PCIe VDM、或 USB 實際傳送。
+>
+> **白話總結**：MCTP 就像「快遞公司」——上層協議是「信件內容」，下層是「交通工具」（卡車=I2C、火車=PCIe、飛機=USB）。MCTP 負責把信件包裝好，不管用什麼交通工具都能送達。
 
 ### 典型使用場景
 
@@ -277,13 +287,13 @@ graph TB
 
 ## DMTF 規範參考
 
-| 規範編號 | 名稱 | 說明 |
-|----------|------|------|
-| DSP0236 | MCTP Base Specification | MCTP 基礎規範 |
-| DSP0237 | MCTP SMBus/I2C Transport Binding | I2C 傳輸綁定 |
-| DSP0238 | MCTP PCIe VDM Transport Binding | PCIe 傳輸綁定 |
-| DSP0239 | MCTP IDs and Codes | 訊息類型和代碼定義 |
-| DSP0283 | MCTP USB Transport Binding | USB 傳輸綁定 |
+| 規範編號 | 名稱                             | 說明               |
+| -------- | -------------------------------- | ------------------ |
+| DSP0236  | MCTP Base Specification          | MCTP 基礎規範      |
+| DSP0237  | MCTP SMBus/I2C Transport Binding | I2C 傳輸綁定       |
+| DSP0238  | MCTP PCIe VDM Transport Binding  | PCIe 傳輸綁定      |
+| DSP0239  | MCTP IDs and Codes               | 訊息類型和代碼定義 |
+| DSP0283  | MCTP USB Transport Binding       | USB 傳輸綁定       |
 
 ---
 

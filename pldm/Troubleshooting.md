@@ -77,17 +77,18 @@ $ busctl call xyz.openbmc_project.PLDM \
 **症狀**：`systemctl status pldmd` 顯示 failed
 
 **診斷**：
+
 ```bash
 $ journalctl -u pldmd --no-pager -n 50
 ```
 
 **常見原因**：
 
-| 原因 | 解決方案 |
-|------|---------|
+| 原因                 | 解決方案                                                             |
+| -------------------- | -------------------------------------------------------------------- |
 | Transport 初始化失敗 | 確認 `af-mctp` kernel module 已載入，或 `mctp-demux` daemon 正在運行 |
-| D-Bus 連線失敗 | 確認 `dbus-daemon` 正常運行 |
-| Instance ID DB 錯誤 | 刪除 `/var/lib/pldm/` 下的 instance ID 資料庫 |
+| D-Bus 連線失敗       | 確認 `dbus-daemon` 正常運行                                          |
+| Instance ID DB 錯誤  | 刪除 `/var/lib/pldm/` 下的 instance ID 資料庫                        |
 
 ### 問題 2：Host 端點不回應
 
@@ -96,6 +97,7 @@ $ journalctl -u pldmd --no-pager -n 50
 **診斷步驟**：
 
 1. **確認 MCTP 連通性**
+
    ```bash
    $ mctp link
    $ mctp address
@@ -103,11 +105,13 @@ $ journalctl -u pldmd --no-pager -n 50
    ```
 
 2. **確認端點已被發現**
+
    ```bash
    $ busctl tree au.com.codeconstruct.MCTP1
    ```
 
 3. **確認 PLDM 支援**
+
    ```bash
    # 端點的 MCTP Message Types 是否包含 1（PLDM）
    $ busctl get-property au.com.codeconstruct.MCTP1 \
@@ -124,6 +128,7 @@ $ journalctl -u pldmd --no-pager -n 50
 **症狀**：Sensor/Effecter 數值異常或缺失
 
 **診斷**：
+
 ```bash
 # 遍歷所有 PDR 確認資料
 $ pldmtool platform GetPDR -d 0
@@ -138,6 +143,7 @@ $ ls /usr/share/pldm/pdr/
 **症狀**：FW Update 卡在某個狀態
 
 **診斷**：
+
 ```bash
 # 查看 FW Update 日誌
 $ journalctl -u pldmd | grep -i "fw\|firmware\|update"
@@ -154,6 +160,7 @@ $ busctl tree xyz.openbmc_project.PLDM | grep software
 **症狀**：`pldm-softpoweroff` 超時未完成
 
 **診斷**：
+
 ```bash
 $ journalctl -u pldm-softpoweroff --no-pager
 
@@ -164,6 +171,7 @@ $ busctl get-property xyz.openbmc_project.State.Host \
 ```
 
 **常見原因**：
+
 - Host 未回報 `GracefulShutdownRequested` Sensor 狀態變更
 - Effecter ID 在 PDR 中找不到
 - `softoff-timeout-seconds`（預設 7200 秒）太短
@@ -175,6 +183,7 @@ $ busctl get-property xyz.openbmc_project.State.Host \
 **原因**：同時有太多未完成的 PLDM 請求
 
 **解決方案**：
+
 ```bash
 # 重啟 pldmd 釋放所有 Instance ID
 $ systemctl restart pldmd
@@ -198,7 +207,19 @@ graph LR
     Wait -->|"收到回應"| Done["完成"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 PLDM 請求的超時與重試機制：
+>
+> 1. **發送請求**：發送 PLDM 請求後開始等待。
+> 2. **等待回應**：預設 2 秒（`response-time-out`）。如果收到回應→完成。
+> 3. **超時重試**：如果超時，重試（預設 2 次）。
+> 4. **重試耗盡**：等待 Instance ID 過期（預設 5 秒），然後呼叫 callback 通知失敗。
+>
+> **關鍵**：總等待時間 = 回應超時 × (重試次數+1) ≤ Instance ID 過期時間 ≤ 6 秒（DSP0240 規定）。
+
 **調校建議**：
+
 - 總等待時間 = `response-time-out` × (`number-of-request-retries` + 1)
 - 總等待時間 **必須** ≤ `instance-id-expiration-interval`
 - DSP0240 規定 Instance ID 最大有效期為 6 秒
@@ -213,4 +234,4 @@ graph LR
 
 ---
 
-*返回 [Home](Home.md)*
+_返回 [Home](Home.md)_

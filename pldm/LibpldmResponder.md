@@ -55,6 +55,17 @@ graph TB
     libpldmresponder --> DBus["D-Bus<br/>sdbusplus"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 libpldmresponder 的完整架構：
+>
+> - **核心 Handler**（4 個）：Base(Type 0)、Platform(Type 2)、BIOS(Type 3)、FRU(Type 4)，各自處理對應類型的 PLDM 命令。
+> - **支援模組**：PDR 工具、事件解析、FRU JSON 解析、BIOS 配置、平台配置——為 Handler 提供輔助功能。
+> - **OEM 擴充介面**：廠商可以插入自訂邏輯，不修改核心程式碼。
+> - **底層依賴**：libpldm（編解碼）和 D-Bus（和 OpenBMC 互動）。
+>
+> **白話總結**：libpldmresponder 是「回應機器」，專門處理別人問 BMC 的請求。四個 Handler 各司其職，支援模組提供工具，OEM 留了擴充點。
+
 ---
 
 ## Handler 實作模式
@@ -134,6 +145,17 @@ graph LR
     PDR -->|"D-Bus"| DBusAPI["dbus_api::Pdr"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 PDR Repository 的資料來源和用途：
+>
+> - **輸入 1：PDR JSON 檔**→ 透過 `generate()` 生成 PDR（BMC 本地的 Sensor/Effecter 描述）。
+> - **輸入 2：Host PDR**→ 透過 HostPDRHandler 從 Host 拉取並合併。
+> - **輸出 1**：透過 `GetPDR` 命令回應給遠端 Requester。
+> - **輸出 2**：透過 D-Bus API 讓 OpenBMC 其他服務查詢。
+>
+> **白話總結**：PDR Repository 就像「硬體型錄」，從 JSON 和 Host 收集資料，供內外查詢使用。
+
 PDR 生成相關的標頭檔：
 
 | 檔案                       | 說明                              |
@@ -177,6 +199,17 @@ sequenceDiagram
     Platform->>DBus: 設定對應的 D-Bus 屬性
     Platform-->>Requester: Response(PLDM_SUCCESS)
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示設定 State Effecter 的流程：
+>
+> 1. **請求者發送 SetStateEffecterStates**：指定 Effecter ID 和想設定的狀態。
+> 2. **查找 PDR**：Platform Handler 從 PDR Repository 查找這個 Effecter ID 對應哪個 D-Bus 屬性。
+> 3. **設定 D-Bus 屬性**：將 PLDM 狀態轉換為 D-Bus 屬性值並寫入。
+> 4. **回應成功**：回傳 PLDM_SUCCESS。
+>
+> **白話總結**：Effecter 是「控制旋鈕」，PDR 是「對照表」，告訴 Handler 轉某個旋鈕對應設定哪個 D-Bus 屬性。
 
 ---
 
@@ -240,6 +273,18 @@ classDiagram
     BIOSConfig --> BIOSAttribute
 ```
 
+> **逐步說明（類別圖）：**
+>
+> 這張圖展示 BIOS 屬性的繼承體系：
+>
+> - **BIOSAttribute**（抽象基底）：定義所有 BIOS 屬性的共同介面（`constructEntry()`、`updateDbusProperty()`）。
+> - **BIOSEnumAttribute**：列舉型屬性（如 BootMode: Legacy/UEFI）。
+> - **BIOSIntegerAttribute**：整數型屬性（如 MemorySize: 0-65535）。
+> - **BIOSStringAttribute**：字串型屬性（如 AssetTag: "Server01"）。
+> - **BIOSConfig**：管理所有 BIOSAttribute 的容器，負責建表和查詢。
+>
+> **白話總結**：三種屬性型別都是 BIOSAttribute 的「子類」，共享相同的介面但各有不同的處理邏輯。這是經典的「策略模式」。
+
 相關檔案：
 
 | 檔案                             | 大小 | 說明                                  |
@@ -275,6 +320,17 @@ graph LR
     DBus -->|"讀取屬性"| Builder["FruImpl<br/>建造 FRU Table"]
     Builder --> Table["FRU Record Table<br/>二進位格式"]
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 FRU 表格的建造流程：
+>
+> 1. **讀取 JSON 配置**：`fru_master.json` 定義了 D-Bus 屬性和 PLDM FRU 欄位的對應關係。
+> 2. **FruParser 解析**：解析 JSON，建立映射表。
+> 3. **讀取 D-Bus 屬性**：根據映射表從 D-Bus Inventory 讀取硬體資訊（製造商、型號等）。
+> 4. **FruImpl 建造 FRU Table**：將讀取到的屬性組裝成 PLDM FRU Record Table 的二進位格式。
+>
+> **重要**：FRU Table 是「懶惰建造」的（lazily built），只有第一次收到 FRU 命令時才會觸發建造。
 
 > **延遲建造**：FRU 表格是 lazily 建造的，只有在收到 FRU 命令或 GetPDR 命令時才會觸發。
 

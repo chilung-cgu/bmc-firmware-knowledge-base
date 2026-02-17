@@ -28,6 +28,16 @@ graph LR
     Tables --> Value["Attribute Value Table<br/>屬性值"]
 ```
 
+> **逐步說明：**
+>
+> PLDM BIOS 使用三張表格來管理 BIOS 設定：
+>
+> - **String Table**：字串對照表。把所有用到的字串（如 "BootMode"、"UEFI"）集中儲存，其他表格用 ID 引用。這樣可以節省空間。
+> - **Attribute Table**：屬性定義表。定義每個 BIOS 屬性的「型態」（例如 BootMode 是列舉型，可選 Legacy/UEFI）。
+> - **Attribute Value Table**：屬性值表。儲存每個 BIOS 屬性的「當前值」（例如 BootMode 目前是 UEFI）。
+>
+> **白話總結**：就像一個「設定系統」——字典（String）、設定項定義（Attribute）、當前值（Value）分開儲存，需要三張表配合使用。
+
 | 表格                      | 說明                       |
 | ------------------------- | -------------------------- |
 | **String Table**          | 字串 ID 到字串值的對照表   |
@@ -195,6 +205,21 @@ sequenceDiagram
     PLDM->>PLDM: SetBIOSAttributeCurrentValue
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 PLDM BIOS 如何與 OpenBMC 的 BIOS Config Manager 和 Redfish 整合：
+>
+> **初始化**：
+>
+> 1. pldmd 解析 BIOS JSON 配置檔，建立 BIOS 表格。
+> 2. 將 `BaseBIOSTable` 發佈到 D-Bus，`bios-settings-mgr` 訂閱並同步。
+>
+> **Redfish 讀取**：3. 使用者透過 bmcweb 存取 Redfish API，bios-settings-mgr 從 D-Bus 讀取 BIOS 屬性。
+>
+> **屬性修改**：4. 使用者透過 Redfish PATCH 修改 BIOS 屬性。5. bios-settings-mgr 更新 D-Bus 上的 `PendingAttributes`。6. pldmd 收到變更信號，透過 PLDM 命令將新值寫入裝置。
+>
+> **白話總結**：用戶透過 Redfish 網頁介面修改 BIOS 設定 → bios-settings-mgr 記錄變更 → pldmd 寫入硬體。
+
 ### D-Bus 介面
 
 | 介面                                     | 路徑                                       | 屬性                |
@@ -229,6 +254,17 @@ flowchart TD
     LoadJSON --> BuildTable["建立 BIOS Tables"]
     BuildTable --> Publish["發布到 D-Bus"]
 ```
+
+> **逐步說明：**
+>
+> 1. **pldmd 啟動**：守護程式開始運行。
+> 2. **等待系統類型**：因為不同系統可能有不同的 BIOS 設定，pldmd 先等待 Entity Manager 告訴它「這是什麼系統」。
+> 3. **從 Entity Manager 取得系統類型**：讀取 `Compatible.Names` 屬性，得知系統型號。
+> 4. **搜尋對應的 JSON**：在 `oem/<vendor>/configurations/bios/<system_type>/` 目錄下找到對應的配置檔。
+> 5. **載入並建立 BIOS 表格**：讀取 JSON、建立三張 BIOS 表格。
+> 6. **發布到 D-Bus**：讓其他服務可以讀取 BIOS 設定。
+>
+> **白話總結**：pldmd 根據「系統型號」載入對應的 BIOS 配置，就像手機根據型號載入不同的設定。
 
 ---
 

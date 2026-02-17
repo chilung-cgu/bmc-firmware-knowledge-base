@@ -255,6 +255,18 @@ sequenceDiagram
     mctpd-->>Client: (eid, net, path, new)
 ```
 
+> **逐步說明：**
+>
+> 1. **Client 呼叫 SetupEndpoint**：某個程式（例如 pldmd）透過 D-Bus 告訴 mctpd：「請幫我設定這個硬體位址（hwaddr）的 MCTP 端點」。硬體位址就像網路 MAC 位址，用來識別實體裝置。
+> 2. **mctpd 詢問裝置的 EID**：mctpd 對裝置發送 `Get Endpoint ID` 命令，問它：「你有沒有已經分配好的 EID（Endpoint ID）？」EID 是 MCTP 網路中每個端點的唯一編號，類似 IP 位址。
+> 3. **裝置回應目前的 EID**：裝置告訴 mctpd 自己是否已有 EID。如果裝置是全新的或剛重啟，可能沒有 EID（回傳 null）。
+> 4. **（條件分支）裝置沒有 EID 的情況**：如果裝置還沒有 EID，mctpd 會從自己的 EID 池中分配一個新的編號，然後用 `Set Endpoint ID` 命令告訴裝置：「你的 EID 是 X」。裝置回應「OK，已接受」。
+> 5. **查詢裝置 UUID**：mctpd 再問裝置：「你的 UUID 是什麼？」UUID 是一個全球唯一的識別碼，用來確保即使 EID 改變，也能辨識出是同一個裝置。
+> 6. **查詢支援的訊息類型**：mctpd 問裝置：「你支援哪些 MCTP 訊息類型？」例如，Type 1 = PLDM、Type 4 = VDPCI（Vendor Defined PCI）。這決定了後續哪些上層協議可以和這個裝置通訊。
+> 7. **建立路由和鄰居表**：mctpd 在 Linux kernel 中建立 MCTP 路由（route）和鄰居（neighbour）記錄，就像設定網路的路由表一樣——告訴 kernel「要和 EID X 通訊，走這條實體路徑」。
+> 8. **建立 D-Bus 物件**：mctpd 在 D-Bus 上建立一個代表這個端點的物件（例如 `/au/com/codeconstruct/mctp1/networks/1/endpoints/8`），讓其他程式（如 pldmd）可以透過 D-Bus 查詢這個端點的資訊。
+> 9. **回傳結果給 Client**：mctpd 把結果回傳給呼叫者，包含：分配的 EID、網路編號（net）、D-Bus 物件路徑、以及這是否是新發現的端點。
+
 ### AssignEndpoint vs SetupEndpoint vs LearnEndpoint
 
 | 方法                     | 說明                         |

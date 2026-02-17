@@ -39,6 +39,19 @@ graph TB
     Activation -->|"D-Bus RequestedActivation"| UpdateMgr
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 fw-update 模組的架構：
+>
+> - **Manager**：整合入口，接收 MCTP 端點事件和 FW Update 命令。
+> - **InventoryManager**：探索裝置能力，建立韌體庫存。
+> - **UpdateManager**：管理更新流程。
+> - **DeviceUpdater**：對單一裝置執行更新狀態機。
+> - **PackageParser**：解析 FW Package 檔案。
+> - **Activation**：透過 D-Bus 觸發更新。
+>
+> **白話總結**：就像一個「軟體更新中心」——探索裝置、解析更新包、執行更新、回報狀態。
+
 ---
 
 ## 角色定義（DSP0267）
@@ -102,6 +115,16 @@ sequenceDiagram
     end
 ```
 
+> **逐步說明：**
+>
+> 當 MCTP 發現新端點時，InventoryManager 對每個端點執行：
+>
+> 1. **QueryDeviceIdentifiers**：問裝置「你是誰？」（PCI VID/PID 等識別符）。
+> 2. **GetFirmwareParameters**：問裝置「你的韌體狀態？」（當前版本、元件資訊）。
+> 3. **建立映射表**：將裝置識別符和元件資訊儲存，供後續更新時匹配使用。
+>
+> **白話總結**：就像店員清點貨架——掃描每個裝置的「條碼」和「韌體版本」，建立庫存記錄。
+
 ### 3. DeviceUpdater — 單裝置更新
 
 實作 DSP0267 定義的完整更新狀態機：
@@ -120,6 +143,10 @@ stateDiagram-v2
 
     ACTIVATE --> [*] : ActivateFirmware
 ```
+
+> **逐步說明（狀態機）：**
+>
+> IDLE → LEARN_COMPONENTS → READY_XFER → DOWNLOAD → VERIFY → APPLY → ACTIVATE。這與 TypeFirmwareUpdate.md 中的狀態機相同，但描述的是 BMC 端 DeviceUpdater 的實作。
 
 ### 4. PackageParser — FW Package 解析
 
@@ -198,6 +225,17 @@ sequenceDiagram
     BMC->>FD: ActivateFirmware
     FD-->>BMC: OK (可能需重啟)
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示完整的韌體更新流程（從使用者視角）：
+>
+> 1. **探索**：BMC 查詢裝置識別和韌體參數。
+> 2. **準備**：使用者上傳 FW Package，BMC 解析並匹配裝置。
+> 3. **更新**：協商 → 傳輸 → 驗證 → 套用（每個 Component 重複）。
+> 4. **啟用**：ActivateFirmware 後裝置可能重啟。
+>
+> **重要細節**：傳輸階段是「裝置主動拉資料」（`RequestFirmwareData`），不是 BMC 推送。
 
 ---
 

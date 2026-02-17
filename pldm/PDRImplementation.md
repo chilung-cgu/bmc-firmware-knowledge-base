@@ -104,6 +104,16 @@ graph TD
     Repo --> GetPDR["回應 GetPDR 請求"]
 ```
 
+> **逐步說明：**
+>
+> 1. **PDR JSON 檔案**：開發者在 JSON 中定義 BMC 本地的 Sensor、Effecter 等硬體描述。
+> 2. **PDR Parser**：解析 JSON，提取 PDR 定義。
+> 3. **PDR Generator**：將解析結果轉換成 PLDM PDR 二進位格式。
+> 4. **PDR Repository**：將生成的 PDR 存入記憶體中的 Repository。
+> 5. **回應 GetPDR 請求**：當遠端裝置查詢時，從 Repository 取出 PDR 回覆。
+>
+> **白話總結**：就像編製「商品目錄」——從配置檔讀取商品定義、轉換成標準格式、存入資料庫，等客戶查詢時直接回覆。
+
 ### 遠端 Terminus PDR (Requester 端 / platform-mc)
 
 BMC 透過 `PlatformManager::getPDRs()` 從遠端 Terminus 拉取 PDR：

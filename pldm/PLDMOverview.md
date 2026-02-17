@@ -45,6 +45,17 @@ graph TB
     MCTP <--> Platform
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 PLDM 在系統中的位置（四層架構）：
+>
+> - **應用層**：Redfish API、IPMI、Web UI（使用者接觸的介面）。
+> - **管理層**：BMC 運行 OpenBMC 作業系統。
+> - **協議層**：PLDM 负責「說什麼」，MCTP 負責「怎麼傳」。
+> - **平台層**：被管理的硬體裝置（Host CPU、GPU、NIC、Storage）。
+>
+> **白話總結**：PLDM 是 BMC 與硬體之間的「共同語言」，透過 MCTP 「交通網」進行通訊。
+
 ---
 
 ## PLDM 訊息格式
@@ -133,6 +144,10 @@ graph TD
     Base --> OEM
 ```
 
+> **逐步說明：**
+>
+> PLDM Type 的關係：Base (Type 0) 是必要的基礎，其他 Type 都依賴它。每個 Type 處理不同功能：Platform（監控）、BIOS（配置）、FRU（硬體資訊）、FW Update（韌體更新）、OEM（廠商自訂）。
+
 ---
 
 ## PLDM over MCTP
@@ -155,6 +170,15 @@ sequenceDiagram
     MCTP->>MCTP: Add MCTP Header
     MCTP->>BMC: MCTP Packet (Type=1)
 ```
+
+> **逐步說明：**
+>
+> 1. BMC 建立 PLDM 訊息。
+> 2. MCTP 層加上 MCTP 標頭（目的地 EID、來源 EID、Message Type=1 表示 PLDM）。
+> 3. 經過實體傳輸（I2C/PCIe）傳送到 Host。
+> 4. Host 建立 PLDM 回應，同樣經 MCTP 封裝後回傳。
+>
+> **白話總結**：PLDM 訊息就像「信件內容」，MCTP 是「信封」，Message Type=1 是「郵票」（表示裡面是 PLDM）。
 
 ### MCTP 封裝
 
@@ -235,6 +259,16 @@ sequenceDiagram
     Note over BMC,New: 之後通訊使用 TID 識別
 ```
 
+> **逐步說明：**
+>
+> TID 分配流程：
+>
+> 1. 新裝置向 BMC 發送 `GetTID` 請求，BMC 回報自己的 TID。
+> 2. BMC 用 `SetTID` 分配一個新的 TID 給新裝置。
+> 3. 之後所有通訊都使用這個 TID 來識別裝置。
+>
+> **白話總結**：就像辦公室新人報到——先知道主管是誰，再被分配一個工號（TID）。
+
 ---
 
 ## 請求/回應模式
@@ -251,6 +285,8 @@ sequenceDiagram
     Responder->>Requester: Response (Instance ID = 5)
 ```
 
+> **逐步說明**：Requester 發送請求（附帶 Instance ID=5），Responder 處理後用相同 Instance ID 回應。Instance ID 用於匹配請求和回應，就像店員給的取餐號碼。
+
 ### 非同步事件
 
 ```mermaid
@@ -266,6 +302,14 @@ sequenceDiagram
     Device->>BMC: PlatformEventMessage
     BMC->>Device: Response (Ack)
 ```
+
+> **逐步說明：**
+>
+> 1. **訂閱**：BMC 透過 `SetEventReceiver` 告訴裝置：「有事情的話告訴我」。
+> 2. **事件發生**：裝置主動發送 `PlatformEventMessage` 給 BMC。
+> 3. **確認**：BMC 回應確認收到。
+>
+> **白話總結**：同步模式是「我問你答」，非同步事件是「你有事主動告訴我」。
 
 ---
 

@@ -38,6 +38,19 @@ graph TB
     EM --> CPER["CPER Event"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 platform-mc 模組的組成：
+>
+> - **Manager**（頂層）：實作 `MctpDiscoveryHandlerIntf`，整合四個子系統。
+> - **TerminusManager**：探索和管理所有 PLDM Terminus（TID 分配、能力查詢）。
+> - **PlatformManager**：拉取 PDR/FRU、配置 Event Receiver。
+> - **SensorManager**：對每個 Terminus 進行 Sensor 輪詢（Round Robin）。
+> - **EventManager**：處理平台事件、輪詢事件、CPER 事件。
+> - **Terminus**：儲存從遠端拉回的 PDR、Sensor 物件、輔助名稱。
+>
+> **白話總結**：platform-mc 是 BMC 「主動管理」遠端裝置的模組——發現裝置、了解它的能力、定期讀取它的 Sensor、處理它的事件。
+
 ---
 
 ## 核心類別
@@ -217,6 +230,18 @@ sequenceDiagram
     end
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 PlatformManager 初始化一個 Terminus 的完整流程：
+>
+> 1. **FRU 拉取**：先取得裝置的 FRU 資料（型號、序號等），可能需要多次讀取。
+> 2. **PDR 拉取**：先查詢 PDR Repository 資訊，然後在迴圈中逐筆拉取 PDR（支援 multi-part transfer）。拉取完成後解析 PDR，建立 NumericSensor 物件。
+> 3. **FRU Inventory 更新**：將 FRU 資料寫入 D-Bus Inventory。
+> 4. **Event Receiver 配置**：查詢裝置支援的事件模式，設定 BMC 為事件接收者。
+> 5. **啟動 Sensor Polling**：開始定期輪詢裝置的 Sensor。
+>
+> **白話總結**：就像新員工報到——先收集個人資料（FRU）、瀏覽能力履歷（PDR）、建立檔案（Inventory）、設定通知（EventReceiver）、開始工作（Polling）。
+
 ---
 
 ### SensorManager
@@ -291,6 +316,18 @@ sequenceDiagram
         SM->>SM: 等待 pollingTime (Timer)
     end
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 SensorManager 的 Sensor 讀取流程：
+>
+> 1. **Per-TID 輪詢迴圈**：每個 Terminus 有獨立的輪詢計時器。
+> 2. **檢查可用性**：先確認 Terminus 是否仍然可用。
+> 3. **Round Robin 讀取**：對該 Terminus 的每個 Sensor 輪流發送 `GetSensorReading`。
+> 4. **更新 D-Bus**：收到讀數後，透過 `sensor->updateReading()` 更新 D-Bus 上的 Sensor 值。
+> 5. **等待間隔**：讀完一輪後等待 `pollingTime` 毫秒再讀下一輪。
+>
+> **白話總結**：就像巡邊檢查——定期走訪每個裝置，讀取每個 Sensor 的值，更新到中央監控系統（D-Bus）。
 
 ---
 

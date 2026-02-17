@@ -41,6 +41,17 @@ graph TB
     DBusEvent -->|"PlatformEventMessage"| Host
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 host-bmc 模組的架構：
+>
+> - **HostPDRHandler**：從 Host 拉取 PDR，合併到 BMC 的 PDR Repository，並建立 D-Bus Inventory 物件。
+> - **DbusToPLDMEvent**：監聽 D-Bus 屬性變更，轉換為 PLDM 事件發給 Host（如 BMC Boot 狀態變更）。
+> - **HostCondition**：監控 Host 是否已準備好進行 PLDM 通訊。
+> - **D-Bus Inventory Helpers**：對應各種硬體型別（CPU、PCIe、Cable 等）的 D-Bus 物件建立工具。
+>
+> **白話總結**：host-bmc 是 BMC 和 Host 之間的「橋樑」——從 Host 拿硬體資訊，同時將 BMC 的狀態變更通知 Host。
+
 ---
 
 ## HostPDRHandler 深度分析
@@ -121,6 +132,19 @@ sequenceDiagram
     end
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 HostPDRHandler 從 Host 擷取 PDR 的完整流程：
+>
+> 1. **檢查 Host 狀態**：先確認 Host 已啟動，可以進行 PLDM 通訊。
+> 2. **遍歷拉取 PDR**：對每個 Record Handle 發送 `GetPDR` 請求，根據 PDR 類型做不同處理：
+>    - **Entity Association PDR**：合併到 BMC 的 Entity Tree（建立硬體層次關係）。
+>    - **FRU Record Set PDR**：建立 D-Bus Inventory 物件（讓 OpenBMC 知道 Host 上有哪些硬體）。
+>    - **其他 PDR**：直接加入 BMC 的 PDR Repository。
+> 3. **通知 Host**：發送 `PDRRepositoryChgEvent`，告訴 Host：「BMC 的 PDR 已更新，請同步」。
+>
+> **白話總結**：就像合併兩家公司的資產清單——從 Host 拿全部硬體清單，依類型派發處理，最後通知雙方「清單已同步」。
+
 ### SensorEntry 結構
 
 用來唯一識別 Host Sensor PDR：
@@ -156,6 +180,16 @@ graph LR
     Converter -->|"encode"| PLDM["PlatformEventMessage"]
     PLDM -->|"sendMsg"| Host["Host Firmware"]
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 D-Bus 事件轉換為 PLDM 事件的流程：
+>
+> 1. **D-Bus 信號**：OpenBMC 中某個 D-Bus 屬性變更（例如 BMC Boot 狀態變成 "Ready"）。
+> 2. **DbusToPLDMEvent 監聽到變更**：將 D-Bus 屬性值轉換為 PLDM 事件格式。
+> 3. **編碼並發送給 Host**：透過 `PlatformEventMessage` 發送給 Host Firmware。
+>
+> **白話總結**：BMC 上的狀態變更必須「翻譯」成 PLDM 格式才能告訴 Host。DbusToPLDMEvent 就是這個「翻譯官」。
 
 ---
 

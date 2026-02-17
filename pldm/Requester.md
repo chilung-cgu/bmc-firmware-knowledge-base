@@ -38,6 +38,19 @@ graph TB
     Discovery --> Handler
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 Requester 模組的架構組成：
+>
+> - **應用層**（上方）：platform-mc、host-bmc 等模組透過 Handler 發送請求。
+> - **requester 模組**（中間）：
+>   - **Handler**：請求生命週期管理器，管理佇列、重試、超時。
+>   - **Request**：單一請求的封裝，包含自動重試邏輯。
+>   - **MctpDiscovery**：透過 D-Bus 監聽 MCTP 端點的新增/移除。
+> - **外部依賴**（下方）：PldmTransport（MCTP 傳輸）、InstanceIdDb（ID 管理）、mctpd D-Bus。
+>
+> **白話總結**：應用層想發請求時，透過 Handler 排隊、發送、重試，最後透過 MCTP 傳送出去。
+
 ---
 
 ## 核心元件
@@ -106,6 +119,20 @@ sequenceDiagram
     end
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示一個 PLDM 請求從註冊到完成的完整生命週期：
+>
+> 1. **註冊請求**：應用層呼叫 `registerRequest()`，請求被推入端點專屬的佇列。
+> 2. **檢查端點狀態**：
+>    - 如果端點空閒（沒有其他請求在等回應），立即處理：建立 Request 物件、啟動過期計時器、發送訊息。
+>    - 如果端點忙碌，請求在佇列中等待。
+> 3. **等待回應**：
+>    - **收到回應**：停止計時器、呼叫原始 callback、釋放 Instance ID、處理佇列中的下一個請求。
+>    - **超時無回應**：呼叫 callback 但傳入空回應（通知失敗），然後處理下一個請求。
+>
+> **關鍵設計**：每個端點一次只允許一個活躍請求，避免 Instance ID 衝突和压垂低資源端點。
+
 #### 建構參數
 
 ```cpp
@@ -161,6 +188,18 @@ stateDiagram-v2
     WaitingResponse --> Success : 收到回應
     Sending --> Failed : send() 失敗
 ```
+
+> **逐步說明（狀態機）：**
+>
+> 單一 Request 物件的狀態轉換：
+>
+> 1. **Idle → Sending**：呼叫 `start()` 開始發送。
+> 2. **Sending → WaitingResponse**：發送成功後等待回應。
+> 3. **WaitingResponse → Sending**：如果超時且還有重試次數，重新發送（預設 2 次重試）。
+> 4. **WaitingResponse → Failed**：重試次數耗盡，宣告失敗。
+> 5. **WaitingResponse → Success**：收到回應，成功。
+>
+> **白話總結**：就像打電話，無人接聽就重撥，重撥兩次還是沒人接就放棄。
 
 ```cpp
 // 抽象基底類別：重試計時器
@@ -246,6 +285,16 @@ graph TB
     removeEndpoints --> handleRemovedMctpEndpoints["通知所有 Handler"]
     propertiesChangedCb --> updateAvailability["updateMctpEndpointAvailability()"]
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 MctpDiscovery 如何監聽 D-Bus 信號：
+>
+> - **InterfacesAdded**：新 MCTP 端點出現時，呼叫 `discoverEndpoints()` 通知所有註冊的 Handler（如 FW Manager、Platform Manager）。
+> - **InterfacesRemoved**：端點消失時，呼叫 `removeEndpoints()` 通知 Handler 清理。
+> - **PropertiesChanged**：端點屬性變更（如 Connectivity 狀態）時，更新可用性。
+>
+> **白話總結**：MctpDiscovery 像「哨兵」，監控誰來了、誰走了、誰的狀態變了，並即時通知相關模組。
 
 ### Handler 介面
 

@@ -171,6 +171,14 @@ sequenceDiagram
     mctpd-->>Client: (eid, net, path, new)
 ```
 
+> **逐步說明：**
+>
+> 1. **Client 請求發現端點**：D-Bus 程式（如 pldmd）呼叫 `SetupEndpoint`，傳入裝置的硬體位址（如 I2C 地址）。
+> 2. **透過 Kernel 查詢裝置**：mctpd 不直接和裝置通訊，而是透過 Linux kernel 的 MCTP 子系統發送「取得端點 ID」的控制訊息。
+> 3. **條件處理**：如果裝置還沒有 EID，mctpd 會分配一個新的 EID 並設定給裝置。
+> 4. **建立 D-Bus 物件與路由**：在 D-Bus 上建立端點物件（供其他程式查詢），並在 kernel 中建立路由（供實隞通訊使用）。
+> 5. **回傳結果**：回傳 EID、網路 ID、D-Bus 路徑、以及是否為新發現的端點。
+
 ### 訊息傳輸流程
 
 ```mermaid
@@ -193,6 +201,21 @@ sequenceDiagram
     Stack-->>Socket: Complete Message
     Socket-->>App: recvmsg(data)
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示了一筆 MCTP 訊息從應用程式發送到硬體、再從硬體接收回來的完整過程：
+>
+> **發送方向（上半部）：**
+>
+> 1. **應用程式發送**：應用程式（如 pldmd）透過 `AF_MCTP` socket 呼叫 `sendmsg(data)` 發送資料。這只是一般的 Linux socket 呼叫，跟用 TCP/UDP 發送資料很類似。
+> 2. **分片**：如果資料太大，MCTP stack 會將它切成多個小封包（fragment）。每個封包有自己的序號和 SOM/EOM 標誌。
+> 3. **查詢路由**：stack 查詢路由表和鄰居表，決定要從哪個網路介面、發到哪個硬體位址。
+> 4. **傳輸到硬體**：驅動程式（如 I2C driver）將封包透過實體線路發出。
+>
+> **接收方向（下半部）：** 5. **硬體接收**：硬體收到封包，傳給 driver。6. **重組**：如果原始訊息被分片過，stack 會收集所有片段，重新組裝成完整訊息。7. **遞交給應用**：完整訊息透過 socket 遞交給應用程式，應用程式透過 `recvmsg(data)` 讀取。
+>
+> **白話總結**：整個過程就像寄信：寫信（sendmsg）→ 切成明信片大小（分片）→ 查郵過區號（路由）→ 郵差投遞（傳輸）→ 對方收信（接收）→ 重組明信片（重組）→ 讀信（recvmsg）。
 
 ---
 

@@ -32,6 +32,20 @@ graph TB
     PDR --> FRU["FRU Record Set PDR"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 PDR Repository 中各種 PDR 類型的組成：
+>
+> - **Terminus Locator PDR**：描述「誰在系統中」——每個 PLDM Terminus 的位置訊息
+> - **Numeric Sensor PDR**：描述數值型 Sensor（如溫度=45°C）
+> - **State Sensor PDR**：描述狀態型 Sensor（如電源=開/關）
+> - **Numeric Effecter PDR**：描述數值型控制器（如設定風扇轉速=5000 RPM）
+> - **State Effecter PDR**：描述狀態型控制器（如設定 LED=開/關）
+> - **Entity Association PDR**：描述實體之間的關聯（如「CPU 0 屬於主機板」）
+> - **FRU Record Set PDR**：描述硬體資訊集
+>
+> **白話總結**：PDR Repository 就像一本「硬體型錄」，記錄了系統中所有的 Sensor、控制器、硬體組件及它們的關係。
+
 ### PDR 類型
 
 | Type | 名稱                   | 說明                                  |
@@ -147,6 +161,16 @@ graph LR
     Convert --> Value["實際值<br/>(float/int)"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示從 Numeric Sensor 讀取值的過程：
+>
+> 1. **Sensor Reading**：從硬體讀取原始值（raw value），例如溫度 Sensor 回傳 `180`。
+> 2. **單位轉換**：根據 PDR 中定義的公式（y = (m × x + b) × 10^r）將原始值轉換為實際值。
+> 3. **實際值**：得到有意義的數值，例如 `45.0°C`。
+>
+> **為什麼需要轉換**：硬體回傳的是「機器值」，人類看不懂。PDR 中的公式幫助把機器值轉成人類可讀的唏位值。
+
 **pldmtool 範例：**
 
 ```bash
@@ -234,6 +258,14 @@ sequenceDiagram
     BMC->>Device: Response (Ack)
     BMC->>BMC: 更新 D-Bus 屬性
 ```
+
+> **逐步說明：**
+>
+> 1. **註冊事件接收者**：BMC 發送 `SetEventReceiver` 告訴裝置：「有事件請發給我（EID 和 TID）」。
+> 2. **事件發生**：當裝置有狀況（例如溫度超過閾值），它透過 `PlatformEventMessage` 主動通知 BMC。
+> 3. **BMC 確認並更新**：BMC 回傳確認，並將事件資訊寫入 D-Bus，讓其他 OpenBMC 服務可以讀取。
+>
+> **白話總結**：就像設定「緊急聯絡人」——告訴裝置「有問題打給我」，裝置就會在異常時主動通知 BMC。
 
 ### 事件類型
 

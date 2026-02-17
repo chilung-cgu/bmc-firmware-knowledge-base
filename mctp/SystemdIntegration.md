@@ -28,12 +28,12 @@ WantedBy=mctp.target
 
 **說明**：
 
-| 欄位 | 說明 |
-|------|------|
-| `Type=dbus` | D-Bus 啟動類型，當服務取得 bus name 後視為啟動完成 |
-| `BusName` | mctpd 的 D-Bus 服務名稱 |
-| `After=mctp-local.target` | 等待本地 MCTP 設定完成後才啟動 |
-| `WantedBy=mctp.target` | 作為 mctp.target 的依賴 |
+| 欄位                      | 說明                                               |
+| ------------------------- | -------------------------------------------------- |
+| `Type=dbus`               | D-Bus 啟動類型，當服務取得 bus name 後視為啟動完成 |
+| `BusName`                 | mctpd 的 D-Bus 服務名稱                            |
+| `After=mctp-local.target` | 等待本地 MCTP 設定完成後才啟動                     |
+| `WantedBy=mctp.target`    | 作為 mctp.target 的依賴                            |
 
 ### mctp.target
 
@@ -50,6 +50,7 @@ WantedBy=multi-user.target
 ```
 
 **說明**：
+
 - 表示 MCTP 基礎設施已就緒
 - 其他需要 MCTP 的服務可以 `After=mctp.target`
 
@@ -62,19 +63,19 @@ graph TD
     subgraph "System Boot"
         MUT[multi-user.target]
     end
-    
+
     subgraph "MCTP Infrastructure"
         MT[mctp.target]
         MLT[mctp-local.target]
         MLS[mctp-local-setup.service]
         MCTPD[mctpd.service]
     end
-    
+
     subgraph "MCTP Consumers"
         PLDM[pldmd.service]
         OTHER[其他服務...]
     end
-    
+
     MUT --> MT
     MT --> MLT
     MT --> MCTPD
@@ -83,6 +84,19 @@ graph TD
     MT --> PLDM
     MT --> OTHER
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 MCTP 相關服務在 systemd 中的啟動順序：
+>
+> 1. **multi-user.target**：系統正常開機完成後的目標。
+> 2. **mctp.target**：所有 MCTP 基礎設施就緒的「里程碑」。其他需要 MCTP 的服務（如 pldmd）都等待這個 target。
+> 3. **mctp-local.target**：本地 MCTP 設定完成的「里程碑」。
+> 4. **mctp-local-setup.service**：（由平台廠商提供）負責設定 MCTP 介面、分配本地 EID 等。這個服務必須先完成，mctpd 才能啟動。
+> 5. **mctpd.service**：MCTP 控制協議守護程式，在本地設定完成後啟動。
+> 6. **pldmd.service 和其他服務**：在 `mctp.target` 就緒後才啟動，確保 MCTP 通訊已可用。
+>
+> **白話總結**：啟動順序是「先設定硬體 → 再啟動 mctpd → 最後啟動上層服務」，就像蓋房子要先打地基（硬體設定）、再蓋結構（mctpd）、最後裝潢入住（pldmd 等）。
 
 ### 啟動階段
 

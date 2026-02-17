@@ -52,6 +52,18 @@ flowchart TD
     Signal --> Run["19. event.loop()<br/>進入主事件迴圈"]
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 pldmd 守護程式從啟動到進入主迴圈的 19 個步驟：
+>
+> 1. **步驟 1-3（基礎設定）**：解析命令列參數、讀取 Host 的 MCTP EID（通訊地址）、初始化傳輸層（建立和 MCTP 的連線）。
+> 2. **步驟 4-6（基礎設施）**：取得事件迴圈（用於非同步處理）、建立 D-Bus 連線（和 OpenBMC 其他服務通訊）、初始化 Instance ID 資料庫（用於匹配請求/回應）。
+> 3. **步驟 7-9（核心元件）**：建立 Invoker（訊息分發器）和 Requester Handler（請求管理器）、初始化 PDR 倉庫（平台描述記錄）、建立 Platform MC 管理器。
+> 4. **步驟 10-12（處理器註冊）**：建立各 PLDM Type 的 Handler（FRU/Platform/BIOS/Base）、OEM 初始化、將所有 Handler 註冊到 Invoker 中。
+> 5. **步驟 13-19（最後就緒）**：建立 D-Bus 介面、韌體更新管理器、MCTP 端點探索、註冊 IO 回調（監聽傳入的 PLDM 訊息）、處理 Host PDR、註冊信號處理，最後進入主事件迴圈（無限等待並處理事件）。
+>
+> **白話總結**：就像開一家餐廳——先租店面（傳輸層）、接水電（D-Bus）、排置廠房設備（Handler）、註冊外送平台（MCTP）、最後開門營業（event.loop）。
+
 ---
 
 ## 核心元件詳解
@@ -101,6 +113,16 @@ graph LR
     Base --> Cmd1["handlers[command]()"]
     Platform --> Cmd2["handlers[command]()"]
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 pldmd 的「兩層分發」架構：
+>
+> 1. **第一層：Invoker**：當一筆 PLDM 訊息進來時，Invoker 先看它的 PLDM Type（像收發室看郵件的「部門」欄位），然後轉發給對應的 CmdHandler。
+> 2. **第二層：CmdHandler**：每個 CmdHandler 再看具體的 Command Code（像看郵件的「收件人」），呼叫對應的處理函式。
+> 3. **特殊路徑：Type 5**：FW Update 不經過 Invoker，而是直接走獨立的 `FW Update Manager`。這是因為 FW Update 的處理邏輯和其他 Type 很不一樣。
+>
+> **白話總結**：就像一個公司的收發室：先看「哪個部門」（PLDM Type）→ 再看「哪個人」（Command）→ 最後交給負責的員工處理。
 
 **第一層：`Invoker`**（`pldmd/invoker.hpp`）
 
@@ -184,6 +206,21 @@ sequenceDiagram
         IO->>Handler: handleResponse(eid, instance, type, cmd, resp, len)
     end
 ```
+
+> **逐步說明：**
+>
+> 這張圖展示 pldmd 收到一筆 MCTP 訊息後的完整處理流程：
+>
+> 1. **收到 MCTP 訊息**：當 MCTP Transport 的 file descriptor 變得可讀時（EPOLLIN 事件），IO 回調被觸發，從 Transport 讀取訊息。
+> 2. **記錄到 Flight Recorder**：如果啟用了 Flight Recorder，將訊息記錄下來（像飛機的黑盒子），供後續除錯使用。
+> 3. **判斷是 Request 還是 Response**：
+>    - **如果是 Request**（別人問我、我要回答）：
+>      - Type 不是 FW Update → 走 Invoker 分發給對應的 CmdHandler
+>      - Type 是 FW Update → 直接交給 FW Update Manager
+>      - 處理完後發送 Response 回去
+>    - **如果是 Response**（我問別人、別人回答我）：交給 Requester Handler，透過 Instance ID 匹配到對應的請求，呼叫 callback。
+>
+> **白話總結**：pldmd 就像一個「接線生」——收到來電後，先判斷是「別人打來的」還是「我打出去的回複」，然後轉到對的部門。
 
 **關鍵設計決策**：
 

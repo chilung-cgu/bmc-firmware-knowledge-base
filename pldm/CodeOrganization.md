@@ -123,6 +123,18 @@ classDiagram
     CmdHandler <|-- PlatformHandler
 ```
 
+> **逐步說明（類別圖）：**
+>
+> 所有 PLDM 命令處理器都繼承自 `CmdHandler` 抽象基底類別：
+>
+> - **CmdHandler**：提供 `handle()` 方法和命令註冊表（`handlers` map）。
+> - **BaseHandler**：處理 Type 0 命令（GetPLDMTypes、GetTID 等）。
+> - **BIOSHandler**：處理 Type 3 命令（GetBIOSTable、SetBIOSAttribute 等）。
+> - **FRUHandler**：處理 Type 4 命令（GetFRURecordTable 等）。
+> - **PlatformHandler**：處理 Type 2 命令（GetPDR、GetSensorReading 等）。
+>
+> **白話總結**：這是「命令模式」的實作——每個 Handler 都知道如何處理自己類型的命令。
+
 ---
 
 ### requester/
@@ -227,6 +239,19 @@ classDiagram
     Manager --> EventManager
     TerminusManager --> Terminus
 ```
+
+> **逐步說明（類別圖）：**
+>
+> platform-mc 模組的類別關係：
+>
+> - **Manager**：頂層管理器，擁有四個子系統。
+> - **TerminusManager**：管理所有 Terminus 的生命週期。
+> - **Terminus**：儲存單一裝置的 PDR、Sensor、支援的 PLDM Types。
+> - **PlatformManager**：負責 PDR/FRU 拉取和初始化。
+> - **SensorManager**：負責 Sensor 輪詢。
+> - **EventManager**：負責事件處理。
+>
+> **白話總結**：展示了「誰擁有誰」的關係——Manager 擁有所有子系統，TerminusManager 擁有所有 Terminus。
 
 ---
 

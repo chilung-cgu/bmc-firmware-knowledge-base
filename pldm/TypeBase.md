@@ -207,6 +207,19 @@ sequenceDiagram
     end
 ```
 
+> **逐步說明：**
+>
+> 這張圖展示 BMC 發現新 PLDM Terminus 時的完整探索流程：
+>
+> 1. **查詢 TID**：BMC 先問新裝置：「你的 Terminus ID 是什麼？」如果回傳 0xFF（未分配），表示需要 BMC 幫它分配。
+> 2. **分配新 TID**：BMC 分配一個 TID（例如 2）給新裝置。TID 就像 PLDM 層級的「員工編號」，和 MCTP 的 EID（通訊地址）是不同層的概念。
+> 3. **探索能力**：BMC 問裝置：「你支援哪些 PLDM Type？」回傳 [0, 2, 3, 4] 表示支援 Base、Platform、BIOS、FRU。
+> 4. **迴圈查詢每個 Type 的詳情**：對每個支援的 Type，BMC 進一步查詢：
+>    - `GetPLDMVersion`：「你用的是哪個版本的規範？」
+>    - `GetPLDMCommands`：「你支援哪些命令？」
+>
+> **白話總結**：就像面試新員工——先問名字（TID）、再問會什麼技能（Types）、然後問每個技能的程度（Version/Commands）。
+
 ---
 
 ## libpldm API
