@@ -10,11 +10,11 @@ Entity-Manager 會在特定情況下自動建立實體間的**關聯性（Associ
 
 ### 概覽
 
-| 關聯類型   | 正向         | 反向           | 用途                    | 允許的發起者 Type | 允許的目標 Type                   |
-| ---------- | ------------ | -------------- | ----------------------- | ----------------- | --------------------------------- |
-| containing | `containing` | `contained_by` | 容納關係（機箱→主機板） | `Chassis`         | `Board`, `Chassis`, `PowerSupply` |
-| powering   | `powering`   | `powered_by`   | 供電關係（PSU→主機板）  | `PowerSupply`     | `Board`, `Chassis`                |
-| probing    | `probing`    | `probed_by`    | 探測關係（自動建立）    | 任意              | 任意                              |
+| 關聯類型   | 正向         | 反向           | 用途                    | 允許的發起者 Type        | 允許的目標 Type                   |
+| ---------- | ------------ | -------------- | ----------------------- | ------------------------ | --------------------------------- |
+| containing | `containing` | `contained_by` | 容納關係（機箱→主機板） | `Chassis`                | `Board`, `Chassis`, `PowerSupply` |
+| powering   | `powering`   | `powered_by`   | 供電關係（PSU→主機板）  | `Chassis`, `PowerSupply` | `Board`, `Chassis`, `PowerSupply` |
+| probing    | `probing`    | `probed_by`    | 探測關係（自動建立）    | 任意                     | 任意                              |
 
 > 📝 **Source**：上表的 `allowedOnBoardTypes` 和 `allowedOnBoardTypesReverse` 定義在 `topology.cpp` L3-27。
 
@@ -197,13 +197,13 @@ Associations:
 
 ### DownstreamPort 類型
 
-> ⚠️ **簡化說明**：`DownstreamPort` 是 `topology.cpp` L125-143 中定義的另一種 Port 類型，它使用 `ConnectsTo` 屬性而非 `PortType` 來指定連接目標。這是一種更靈活的配置方式，但目前文件較少提及。
+> ⚠️ **簡化說明**：`DownstreamPort` 是 `topology.cpp` L125-143 中定義的另一種 Port 類型，它使用 `ConnectsToType` 屬性而非 `PortType` 來指定連接目標。這是一種更靈活的配置方式，但目前文件較少提及。另外，若有 `PowerPort` 屬性存在，還會額外建立 `powering` 關聯。
 
 ```json
 {
   "Name": "DownstreamSlot",
   "Type": "DownstreamPort",
-  "ConnectsTo": "UpstreamSlotName"
+  "ConnectsToType": "UpstreamSlotType"
 }
 ```
 

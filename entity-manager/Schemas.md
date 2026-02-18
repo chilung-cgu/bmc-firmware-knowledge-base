@@ -130,16 +130,29 @@ Probe 可以是單一字串或字串陣列：
 
 頂層配置可以攜帶以下標準 D-Bus 介面（全部可選）：
 
+📍 [global.json](../../src/entity-manager/schemas/global.json) L54-110
+
 | 屬性名（JSON key）                                     | 引用                | 用途                     |
 | ------------------------------------------------------ | ------------------- | ------------------------ |
 | `xyz.openbmc_project.Common.UUID`                      | `openbmc-dbus.json` | 唯一識別碼               |
 | `xyz.openbmc_project.Inventory.Decorator.Asset`        | `openbmc-dbus.json` | 資產資訊（廠商、型號等） |
 | `xyz.openbmc_project.Inventory.Decorator.AssetTag`     | `openbmc-dbus.json` | 資產標籤                 |
+| `xyz.openbmc_project.Inventory.Decorator.Cable`        | `openbmc-dbus.json` | 纜線裝飾屬性             |
 | `xyz.openbmc_project.Inventory.Decorator.Compatible`   | `openbmc-dbus.json` | 相容性列表               |
+| `xyz.openbmc_project.Inventory.Decorator.ManagedHost`  | `openbmc-dbus.json` | 受管主機                 |
 | `xyz.openbmc_project.Inventory.Decorator.Replaceable`  | `openbmc-dbus.json` | 是否可更換               |
+| `xyz.openbmc_project.Inventory.Decorator.Revision`     | `openbmc-dbus.json` | 版本資訊                 |
 | `xyz.openbmc_project.Inventory.Decorator.Slot`         | `openbmc-dbus.json` | 插槽資訊                 |
+| `xyz.openbmc_project.Inventory.Item.Accelerator`       | `openbmc-dbus.json` | 加速器標記               |
+| `xyz.openbmc_project.Inventory.Item.Bmc`               | `openbmc-dbus.json` | BMC 標記                 |
 | `xyz.openbmc_project.Inventory.Item.Board.Motherboard` | `openbmc-dbus.json` | 主機板標記               |
 | `xyz.openbmc_project.Inventory.Item.Chassis`           | `openbmc-dbus.json` | 機箱標記                 |
+| `xyz.openbmc_project.Inventory.Item.Dimm`              | `openbmc-dbus.json` | 記憶體模組標記           |
+| `xyz.openbmc_project.Inventory.Item.NetworkInterface`  | `openbmc-dbus.json` | 網路介面標記             |
+| `xyz.openbmc_project.Inventory.Item.Panel`             | `openbmc-dbus.json` | 面板標記                 |
+| `xyz.openbmc_project.Inventory.Item.Storage`           | `openbmc-dbus.json` | 儲存裝置標記             |
+| `xyz.openbmc_project.Inventory.Item.System`            | `openbmc-dbus.json` | 系統標記                 |
+| `xyz.openbmc_project.Inventory.Item.Valve`             | `openbmc-dbus.json` | 閥門標記                 |
 
 ---
 
