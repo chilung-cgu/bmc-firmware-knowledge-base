@@ -10,11 +10,13 @@ Entity-Manager 會在特定情況下自動建立實體間的**關聯性（Associ
 
 ### 概覽
 
-| 關聯類型 | 正向 | 反向 | 用途 |
-|---------|------|------|------|
-| containing | containing | contained_by | 容納關係（機箱→主機板） |
-| powering | powering | powered_by | 供電關係（PSU→主機板） |
-| probing | probing | probed_by | 探測關係（自動建立） |
+| 關聯類型   | 正向         | 反向           | 用途                    | 允許的發起者 Type | 允許的目標 Type                   |
+| ---------- | ------------ | -------------- | ----------------------- | ----------------- | --------------------------------- |
+| containing | `containing` | `contained_by` | 容納關係（機箱→主機板） | `Chassis`         | `Board`, `Chassis`, `PowerSupply` |
+| powering   | `powering`   | `powered_by`   | 供電關係（PSU→主機板）  | `PowerSupply`     | `Board`, `Chassis`                |
+| probing    | `probing`    | `probed_by`    | 探測關係（自動建立）    | 任意              | 任意                              |
+
+> 📝 **Source**：上表的 `allowedOnBoardTypes` 和 `allowedOnBoardTypesReverse` 定義在 `topology.cpp` L3-27。
 
 ---
 
@@ -30,15 +32,15 @@ Entity-Manager 會在特定情況下自動建立實體間的**關聯性（Associ
 
 ```json
 {
-    "Name": "My Baseboard",
-    "Type": "Board",
-    "Exposes": [
-        {
-            "Name": "ContainingPort",
-            "Type": "Port",
-            "PortType": "contained_by"
-        }
-    ]
+  "Name": "My Baseboard",
+  "Type": "Board",
+  "Exposes": [
+    {
+      "Name": "ContainingPort",
+      "Type": "Port",
+      "PortType": "contained_by"
+    }
+  ]
 }
 ```
 
@@ -46,15 +48,15 @@ Entity-Manager 會在特定情況下自動建立實體間的**關聯性（Associ
 
 ```json
 {
-    "Name": "Server Chassis",
-    "Type": "Chassis",
-    "Exposes": [
-        {
-            "Name": "ContainingPort",
-            "Type": "Port",
-            "PortType": "containing"
-        }
-    ]
+  "Name": "Server Chassis",
+  "Type": "Chassis",
+  "Exposes": [
+    {
+      "Name": "ContainingPort",
+      "Type": "Port",
+      "PortType": "containing"
+    }
+  ]
 }
 ```
 
@@ -92,15 +94,15 @@ busctl get-property xyz.openbmc_project.EntityManager \
 
 ```json
 {
-    "Name": "My Baseboard",
-    "Type": "Board",
-    "Exposes": [
-        {
-            "Name": "GenericPowerPort",
-            "Type": "Port",
-            "PortType": "powered_by"
-        }
-    ]
+  "Name": "My Baseboard",
+  "Type": "Board",
+  "Exposes": [
+    {
+      "Name": "GenericPowerPort",
+      "Type": "Port",
+      "PortType": "powered_by"
+    }
+  ]
 }
 ```
 
@@ -108,15 +110,15 @@ busctl get-property xyz.openbmc_project.EntityManager \
 
 ```json
 {
-    "Name": "Generic PSU",
-    "Type": "PowerSupply",
-    "Exposes": [
-        {
-            "Name": "GenericPowerPort",
-            "Type": "Port",
-            "PortType": "powering"
-        }
-    ]
+  "Name": "Generic PSU",
+  "Type": "PowerSupply",
+  "Exposes": [
+    {
+      "Name": "GenericPowerPort",
+      "Type": "Port",
+      "PortType": "powering"
+    }
+  ]
 }
 ```
 
@@ -141,9 +143,9 @@ busctl get-property xyz.openbmc_project.EntityManager \
 
 ```json
 {
-    "Name": "Yosemite 4 Management Board",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'BOARD_PRODUCT_NAME': 'Management Board wBMC', 'PRODUCT_PRODUCT_NAME': 'Yosemite V4'})"
+  "Name": "Yosemite 4 Management Board",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'BOARD_PRODUCT_NAME': 'Management Board wBMC', 'PRODUCT_PRODUCT_NAME': 'Yosemite V4'})"
 }
 ```
 
@@ -172,26 +174,38 @@ Associations:
 
 ```json
 {
-    "Name": "PortName",
-    "Type": "Port",
-    "PortType": "PortDirection"
+  "Name": "PortName",
+  "Type": "Port",
+  "PortType": "PortDirection"
 }
 ```
 
 ### PortType 值
 
-| PortType | 方向 | 說明 |
-|----------|------|------|
-| `containing` | 正向 | 包含其他元件 |
+| PortType       | 方向 | 說明           |
+| -------------- | ---- | -------------- |
+| `containing`   | 正向 | 包含其他元件   |
 | `contained_by` | 反向 | 被其他元件包含 |
-| `powering` | 正向 | 為其他元件供電 |
-| `powered_by` | 反向 | 由其他元件供電 |
+| `powering`     | 正向 | 為其他元件供電 |
+| `powered_by`   | 反向 | 由其他元件供電 |
 
 ### 名稱匹配規則
 
 - Port 的 `Name` 屬性用於匹配
 - 當兩個配置有相同的 Port `Name` 且 PortType 互補時，建立關聯
 - 如果找不到匹配的 Port，不會報錯，只是不建立關聯
+
+### DownstreamPort 類型
+
+> ⚠️ **簡化說明**：`DownstreamPort` 是 `topology.cpp` L125-143 中定義的另一種 Port 類型，它使用 `ConnectsTo` 屬性而非 `PortType` 來指定連接目標。這是一種更靈活的配置方式，但目前文件較少提及。
+
+```json
+{
+  "Name": "DownstreamSlot",
+  "Type": "DownstreamPort",
+  "ConnectsTo": "UpstreamSlotName"
+}
+```
 
 ---
 
@@ -203,27 +217,27 @@ Associations:
 
 ```json
 {
-    "Name": "1U Server Chassis",
-    "Type": "Chassis",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': '1U Chassis'})",
-    "Exposes": [
-        {
-            "Name": "Chassis FRU",
-            "Type": "EEPROM_24C02",
-            "Bus": "$bus",
-            "Address": "$address"
-        },
-        {
-            "Name": "MainBoardPort",
-            "Type": "Port",
-            "PortType": "containing"
-        },
-        {
-            "Name": "PowerPort",
-            "Type": "Port",
-            "PortType": "powered_by"
-        }
-    ]
+  "Name": "1U Server Chassis",
+  "Type": "Chassis",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': '1U Chassis'})",
+  "Exposes": [
+    {
+      "Name": "Chassis FRU",
+      "Type": "EEPROM_24C02",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+    {
+      "Name": "MainBoardPort",
+      "Type": "Port",
+      "PortType": "containing"
+    },
+    {
+      "Name": "PowerPort",
+      "Type": "Port",
+      "PortType": "powered_by"
+    }
+  ]
 }
 ```
 
@@ -231,27 +245,27 @@ Associations:
 
 ```json
 {
-    "Name": "Server Baseboard",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Server Board'})",
-    "Exposes": [
-        {
-            "Name": "Board FRU",
-            "Type": "EEPROM_24C02",
-            "Bus": "$bus",
-            "Address": "$address"
-        },
-        {
-            "Name": "MainBoardPort",
-            "Type": "Port",
-            "PortType": "contained_by"
-        },
-        {
-            "Name": "PowerPort",
-            "Type": "Port",
-            "PortType": "powered_by"
-        }
-    ]
+  "Name": "Server Baseboard",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Server Board'})",
+  "Exposes": [
+    {
+      "Name": "Board FRU",
+      "Type": "EEPROM_24C02",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+    {
+      "Name": "MainBoardPort",
+      "Type": "Port",
+      "PortType": "contained_by"
+    },
+    {
+      "Name": "PowerPort",
+      "Type": "Port",
+      "PortType": "powered_by"
+    }
+  ]
 }
 ```
 
@@ -259,22 +273,22 @@ Associations:
 
 ```json
 {
-    "Name": "Delta PSU",
-    "Type": "PowerSupply",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_MANUFACTURER': 'Delta'})",
-    "Exposes": [
-        {
-            "Name": "PSU FRU",
-            "Type": "EEPROM_24C02",
-            "Bus": "$bus",
-            "Address": "$address"
-        },
-        {
-            "Name": "PowerPort",
-            "Type": "Port",
-            "PortType": "powering"
-        }
-    ]
+  "Name": "Delta PSU",
+  "Type": "PowerSupply",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_MANUFACTURER': 'Delta'})",
+  "Exposes": [
+    {
+      "Name": "PSU FRU",
+      "Type": "EEPROM_24C02",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+    {
+      "Name": "PowerPort",
+      "Type": "Port",
+      "PortType": "powering"
+    }
+  ]
 }
 ```
 
@@ -326,11 +340,11 @@ a(sss) 2 \
 
 每個關聯是一個三元組 `(forward, reverse, path)`：
 
-| 欄位 | 說明 |
-|-----|------|
+| 欄位    | 說明                       |
+| ------- | -------------------------- |
 | forward | 從目前物件到目標的關聯類型 |
 | reverse | 從目標到目前物件的關聯類型 |
-| path | 目標物件的 D-Bus 路徑 |
+| path    | 目標物件的 D-Bus 路徑      |
 
 ---
 
@@ -346,11 +360,11 @@ a(sss) 2 \
 
 ### 與 Redfish 的對應
 
-| 關聯類型 | Redfish | 用途 |
-|---------|---------|------|
-| containing | Chassis.Contains | 機箱包含的元件 |
-| contained_by | Chassis.ContainedBy | 所在的機箱 |
-| powering | PoweredBy | 電源來源 |
+| 關聯類型     | Redfish             | 用途           |
+| ------------ | ------------------- | -------------- |
+| containing   | Chassis.Contains    | 機箱包含的元件 |
+| contained_by | Chassis.ContainedBy | 所在的機箱     |
+| powering     | PoweredBy           | 電源來源       |
 
 ---
 
@@ -396,6 +410,7 @@ busctl get-property xyz.openbmc_project.EntityManager \
 ---
 
 > 📖 **參考**：
+>
 > - [Entity-Manager 關聯性文件](https://github.com/openbmc/entity-manager/blob/master/docs/associations.md)
 > - [OpenBMC 物理拓撲設計](https://github.com/openbmc/docs/blob/master/designs/physical-topology.md)
 > - [OpenBMC Object Mapper 關聯性](https://github.com/openbmc/docs/blob/master/architecture/object-mapper.md#associations)

@@ -40,11 +40,13 @@
 ## 📖 建議閱讀路徑
 
 ### 🚀 新手入門
+
 1. [架構概述](Architecture.md) - 了解系統設計
 2. [核心概念](CoreConcepts.md) - 學習 Entity、Exposes、Probe
 3. [設定指南](ConfigurationGuide.md) - 開始撰寫配置
 
 ### 🔧 平台開發者
+
 1. [架構概述](Architecture.md) - 了解整體架構
 2. [Probe 語法](ProbeSyntax.md) - 掌握探測語法
 3. [設定範例](ExampleConfigurations.md) - 參考實際範例
@@ -52,6 +54,7 @@
 5. [dbus-sensors 整合](DbusSensorsIntegration.md) - 感測器配置
 
 ### 🔍 問題排查
+
 1. [故障排除](Troubleshooting.md) - 診斷問題
 2. [D-Bus API](DBusAPI.md) - 驗證物件與屬性
 
@@ -61,39 +64,46 @@
 
 ### 🏗️ 核心文件
 
-| 文件 | 說明 |
-|------|------|
-| [架構概述](Architecture.md) | 系統設計、元件互動、設計目標 |
+| 文件                        | 說明                              |
+| --------------------------- | --------------------------------- |
+| [架構概述](Architecture.md) | 系統設計、元件互動、設計目標      |
 | [核心概念](CoreConcepts.md) | Entity、Exposes、Probe 定義與範例 |
 
 ### 📡 API 參考
 
-| 文件 | 說明 |
-|------|------|
+| 文件                    | 說明                       |
+| ----------------------- | -------------------------- |
 | [D-Bus API](DBusAPI.md) | 物件路徑、介面、屬性、方法 |
 
 ### ⚙️ 設定指南
 
-| 文件 | 說明 |
-|------|------|
-| [設定指南](ConfigurationGuide.md) | JSON 結構、必填欄位、範本變數 |
-| [Probe 語法](ProbeSyntax.md) | 探測語法、AND/OR 運算、已知限制 |
+| 文件                                 | 說明                                |
+| ------------------------------------ | ----------------------------------- |
+| [設定指南](ConfigurationGuide.md)    | JSON 結構、必填欄位、範本變數       |
+| [Probe 語法](ProbeSyntax.md)         | 探測語法、AND/OR 運算、已知限制     |
 | [設定範例](ExampleConfigurations.md) | 溫度感測器、PCIe 卡、電源供應器範例 |
 
 ### 🔌 元件文件
 
-| 文件 | 說明 |
-|------|------|
-| [FruDevice 守護程式](FruDevice.md) | I2C 掃描、IPMI FRU EEPROM 解析 |
-| [dbus-sensors 整合](DbusSensorsIntegration.md) | hwmon 感測器守護程式整合 |
-| [關聯性](Associations.md) | 實體拓撲建模、containing/powering 關聯 |
-| [EEPROM 偵測](EEPROMDetection.md) | 位址大小偵測模式 (MODE-1/MODE-2) |
+| 文件                                           | 說明                                   |
+| ---------------------------------------------- | -------------------------------------- |
+| [FruDevice 守護程式](FruDevice.md)             | I2C 掃描、IPMI FRU EEPROM 解析         |
+| [dbus-sensors 整合](DbusSensorsIntegration.md) | hwmon 感測器守護程式整合               |
+| [關聯性](Associations.md)                      | 實體拓撲建模、containing/powering 關聯 |
+| [EEPROM 偵測](EEPROMDetection.md)              | 位址大小偵測模式 (MODE-1/MODE-2)       |
+
+### 🧬 深度走讀
+
+| 文件                                         | 說明                                                   |
+| -------------------------------------------- | ------------------------------------------------------ |
+| [Source Code 走讀](SourceCodeWalkthrough.md) | main() → PerformScan → doProbe → postToDbus 完整呼叫鏈 |
+| [JSON Schema 驗證](Schemas.md)               | 24 個 schema 檔案、驗證機制、新增類型步驟              |
 
 ### 🛠️ 操作指南
 
-| 文件 | 說明 |
-|------|------|
-| [故障排除](Troubleshooting.md) | 常見問題、除錯指令、日誌分析 |
+| 文件                              | 說明                                 |
+| --------------------------------- | ------------------------------------ |
+| [故障排除](Troubleshooting.md)    | 常見問題、除錯指令、日誌分析         |
 | [相容軟體](CompatibleSoftware.md) | bmcweb、intel-ipmi-oem、偵測守護程式 |
 
 ---

@@ -12,43 +12,43 @@
 
 ```json
 {
-    "Name": "My Baseboard",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'MyBoard'})",
-    "Exposes": [
+  "Name": "My Baseboard",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'MyBoard'})",
+  "Exposes": [
+    {
+      "Name": "Inlet Temperature",
+      "Type": "TMP75",
+      "Bus": "$bus",
+      "Address": "0x48",
+      "Thresholds": [
         {
-            "Name": "Inlet Temperature",
-            "Type": "TMP75",
-            "Bus": "$bus",
-            "Address": "0x48",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 55
-                },
-                {
-                    "Direction": "greater than",
-                    "Name": "upper warning",
-                    "Severity": 0,
-                    "Value": 45
-                },
-                {
-                    "Direction": "less than",
-                    "Name": "lower warning",
-                    "Severity": 0,
-                    "Value": 5
-                },
-                {
-                    "Direction": "less than",
-                    "Name": "lower critical",
-                    "Severity": 1,
-                    "Value": 0
-                }
-            ]
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 55
+        },
+        {
+          "Direction": "greater than",
+          "Name": "upper warning",
+          "Severity": 0,
+          "Value": 45
+        },
+        {
+          "Direction": "less than",
+          "Name": "lower warning",
+          "Severity": 0,
+          "Value": 5
+        },
+        {
+          "Direction": "less than",
+          "Name": "lower critical",
+          "Severity": 1,
+          "Value": 0
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
@@ -56,32 +56,32 @@
 
 ```json
 {
-    "Name": "$bus GPU Card",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'GPU Riser'})",
-    "Exposes": [
+  "Name": "$bus GPU Card",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'GPU Riser'})",
+  "Exposes": [
+    {
+      "Name": "$bus GPU Local",
+      "Name1": "$bus GPU Remote",
+      "Type": "TMP441",
+      "Bus": "$bus",
+      "Address": "0x4c",
+      "Thresholds": [
         {
-            "Name": "$bus GPU Local",
-            "Name1": "$bus GPU Remote",
-            "Type": "TMP441",
-            "Bus": "$bus",
-            "Address": "0x4c",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 100
-                },
-                {
-                    "Direction": "greater than",
-                    "Name": "upper warning",
-                    "Severity": 0,
-                    "Value": 85
-                }
-            ]
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 100
+        },
+        {
+          "Direction": "greater than",
+          "Name": "upper warning",
+          "Severity": 0,
+          "Value": 85
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
@@ -95,24 +95,24 @@
 
 ```json
 {
-    "Name": "$bus Great Card",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Super Great'})",
-    "Exposes": [
-        {
-            "Name": "$bus great eeprom",
-            "Type": "EEPROM_24C02",
-            "Bus": "$bus",
-            "Address": "$address"
-        },
-        {
-            "Name": "$bus great local",
-            "Name1": "$bus great ext",
-            "Type": "TMP441",
-            "Bus": "$bus",
-            "Address": "0x4c"
-        }
-    ]
+  "Name": "$bus Great Card",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Super Great'})",
+  "Exposes": [
+    {
+      "Name": "$bus great eeprom",
+      "Type": "EEPROM_24C02",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+    {
+      "Name": "$bus great local",
+      "Name1": "$bus great ext",
+      "Type": "TMP441",
+      "Bus": "$bus",
+      "Address": "0x4c"
+    }
+  ]
 }
 ```
 
@@ -130,55 +130,55 @@
 
 ```json
 {
-    "Name": "Delta PSU $index",
-    "Type": "PowerSupply",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_MANUFACTURER': 'Delta', 'PRODUCT_PRODUCT_NAME': 'DPS-1200'})",
-    "Exposes": [
+  "Name": "Delta PSU $index",
+  "Type": "PowerSupply",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_MANUFACTURER': 'Delta', 'PRODUCT_PRODUCT_NAME': 'DPS-1200'})",
+  "Exposes": [
+    {
+      "Name": "PSU$index FRU",
+      "Type": "EEPROM_24C02",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+    {
+      "Name": "PSU$index Input Voltage",
+      "Type": "PMBus",
+      "Bus": "$bus",
+      "Address": "0x58",
+      "SensorType": "Voltage",
+      "PowerState": "On"
+    },
+    {
+      "Name": "PSU$index Output Power",
+      "Type": "PMBus",
+      "Bus": "$bus",
+      "Address": "0x58",
+      "SensorType": "Power",
+      "PowerState": "On"
+    },
+    {
+      "Name": "PSU$index Temperature",
+      "Type": "PMBus",
+      "Bus": "$bus",
+      "Address": "0x58",
+      "SensorType": "Temperature",
+      "PowerState": "On",
+      "Thresholds": [
         {
-            "Name": "PSU$index FRU",
-            "Type": "EEPROM_24C02",
-            "Bus": "$bus",
-            "Address": "$address"
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 85
         },
         {
-            "Name": "PSU$index Input Voltage",
-            "Type": "PMBus",
-            "Bus": "$bus",
-            "Address": "0x58",
-            "SensorType": "Voltage",
-            "PowerState": "On"
-        },
-        {
-            "Name": "PSU$index Output Power",
-            "Type": "PMBus",
-            "Bus": "$bus",
-            "Address": "0x58",
-            "SensorType": "Power",
-            "PowerState": "On"
-        },
-        {
-            "Name": "PSU$index Temperature",
-            "Type": "PMBus",
-            "Bus": "$bus",
-            "Address": "0x58",
-            "SensorType": "Temperature",
-            "PowerState": "On",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 85
-                },
-                {
-                    "Direction": "greater than",
-                    "Name": "upper warning",
-                    "Severity": 0,
-                    "Value": 75
-                }
-            ]
+          "Direction": "greater than",
+          "Name": "upper warning",
+          "Severity": 0,
+          "Value": 75
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
@@ -190,115 +190,115 @@
 
 ```json
 {
-    "Name": "Intel S2600WF Baseboard",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PART_NUMBER': 'S2600WF'})",
-    "Exposes": [
-        // FRU EEPROM
+  "Name": "Intel S2600WF Baseboard",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PART_NUMBER': 'S2600WF'})",
+  "Exposes": [
+    // FRU EEPROM
+    {
+      "Name": "Baseboard FRU",
+      "Type": "EEPROM_24C64",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+
+    // 入風口溫度
+    {
+      "Name": "Inlet Temp",
+      "Type": "TMP75",
+      "Bus": 6,
+      "Address": "0x48",
+      "PowerState": "Always",
+      "Thresholds": [
         {
-            "Name": "Baseboard FRU",
-            "Type": "EEPROM_24C64",
-            "Bus": "$bus",
-            "Address": "$address"
-        },
-        
-        // 入風口溫度
-        {
-            "Name": "Inlet Temp",
-            "Type": "TMP75",
-            "Bus": 6,
-            "Address": "0x48",
-            "PowerState": "Always",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 45
-                },
-                {
-                    "Direction": "greater than",
-                    "Name": "upper warning",
-                    "Severity": 0,
-                    "Value": 40
-                }
-            ]
-        },
-        
-        // 出風口溫度
-        {
-            "Name": "Outlet Temp",
-            "Type": "TMP75",
-            "Bus": 6,
-            "Address": "0x49",
-            "PowerState": "Always",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 70
-                },
-                {
-                    "Direction": "greater than",
-                    "Name": "upper warning",
-                    "Severity": 0,
-                    "Value": 60
-                }
-            ]
-        },
-        
-        // ADC 電壓感測器
-        {
-            "Name": "P12V",
-            "Type": "ADC",
-            "Index": 0,
-            "ScaleFactor": 6.8,
-            "PowerState": "Always",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 13.2
-                },
-                {
-                    "Direction": "less than",
-                    "Name": "lower critical",
-                    "Severity": 1,
-                    "Value": 10.8
-                }
-            ]
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 45
         },
         {
-            "Name": "P3V3",
-            "Type": "ADC",
-            "Index": 1,
-            "ScaleFactor": 2.0,
-            "PowerState": "Always",
-            "Thresholds": [
-                {
-                    "Direction": "greater than",
-                    "Name": "upper critical",
-                    "Severity": 1,
-                    "Value": 3.63
-                },
-                {
-                    "Direction": "less than",
-                    "Name": "lower critical",
-                    "Severity": 1,
-                    "Value": 2.97
-                }
-            ]
-        },
-        
-        // 關聯性端口
-        {
-            "Name": "ChassisPort",
-            "Type": "Port",
-            "PortType": "contained_by"
+          "Direction": "greater than",
+          "Name": "upper warning",
+          "Severity": 0,
+          "Value": 40
         }
-    ]
+      ]
+    },
+
+    // 出風口溫度
+    {
+      "Name": "Outlet Temp",
+      "Type": "TMP75",
+      "Bus": 6,
+      "Address": "0x49",
+      "PowerState": "Always",
+      "Thresholds": [
+        {
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 70
+        },
+        {
+          "Direction": "greater than",
+          "Name": "upper warning",
+          "Severity": 0,
+          "Value": 60
+        }
+      ]
+    },
+
+    // ADC 電壓感測器
+    {
+      "Name": "P12V",
+      "Type": "ADC",
+      "Index": 0,
+      "ScaleFactor": 6.8,
+      "PowerState": "Always",
+      "Thresholds": [
+        {
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 13.2
+        },
+        {
+          "Direction": "less than",
+          "Name": "lower critical",
+          "Severity": 1,
+          "Value": 10.8
+        }
+      ]
+    },
+    {
+      "Name": "P3V3",
+      "Type": "ADC",
+      "Index": 1,
+      "ScaleFactor": 2.0,
+      "PowerState": "Always",
+      "Thresholds": [
+        {
+          "Direction": "greater than",
+          "Name": "upper critical",
+          "Severity": 1,
+          "Value": 3.63
+        },
+        {
+          "Direction": "less than",
+          "Name": "lower critical",
+          "Severity": 1,
+          "Value": 2.97
+        }
+      ]
+    },
+
+    // 關聯性端口
+    {
+      "Name": "ChassisPort",
+      "Type": "Port",
+      "PortType": "contained_by"
+    }
+  ]
 }
 ```
 
@@ -310,27 +310,27 @@
 
 ```json
 {
-    "Name": "1U Chassis",
-    "Type": "Chassis",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': '1U Server Chassis'})",
-    "Exposes": [
-        {
-            "Name": "Chassis FRU",
-            "Type": "EEPROM_24C02",
-            "Bus": "$bus",
-            "Address": "$address"
-        },
-        {
-            "Name": "ChassisPort",
-            "Type": "Port",
-            "PortType": "containing"
-        },
-        {
-            "Name": "PowerPort",
-            "Type": "Port",
-            "PortType": "powered_by"
-        }
-    ]
+  "Name": "1U Chassis",
+  "Type": "Chassis",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': '1U Server Chassis'})",
+  "Exposes": [
+    {
+      "Name": "Chassis FRU",
+      "Type": "EEPROM_24C02",
+      "Bus": "$bus",
+      "Address": "$address"
+    },
+    {
+      "Name": "ChassisPort",
+      "Type": "Port",
+      "PortType": "containing"
+    },
+    {
+      "Name": "PowerPort",
+      "Type": "Port",
+      "PortType": "powered_by"
+    }
+  ]
 }
 ```
 
@@ -342,57 +342,57 @@
 
 ```json
 {
-    "Name": "System Fans",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Baseboard'})",
-    "Exposes": [
+  "Name": "System Fans",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Baseboard'})",
+  "Exposes": [
+    {
+      "Name": "Fan 1",
+      "Type": "AspeedFan",
+      "Connector": {
+        "Name": "Fan Connector 1",
+        "Pwm": 0,
+        "Tachs": [0, 1]
+      },
+      "Thresholds": [
         {
-            "Name": "Fan 1",
-            "Type": "AspeedFan",
-            "Connector": {
-                "Name": "Fan Connector 1",
-                "Pwm": 0,
-                "Tachs": [0, 1]
-            },
-            "Thresholds": [
-                {
-                    "Direction": "less than",
-                    "Name": "lower critical",
-                    "Severity": 1,
-                    "Value": 1000
-                },
-                {
-                    "Direction": "less than",
-                    "Name": "lower warning",
-                    "Severity": 0,
-                    "Value": 2000
-                }
-            ]
+          "Direction": "less than",
+          "Name": "lower critical",
+          "Severity": 1,
+          "Value": 1000
         },
         {
-            "Name": "Fan 2",
-            "Type": "AspeedFan",
-            "Connector": {
-                "Name": "Fan Connector 2",
-                "Pwm": 1,
-                "Tachs": [2, 3]
-            },
-            "Thresholds": [
-                {
-                    "Direction": "less than",
-                    "Name": "lower critical",
-                    "Severity": 1,
-                    "Value": 1000
-                },
-                {
-                    "Direction": "less than",
-                    "Name": "lower warning",
-                    "Severity": 0,
-                    "Value": 2000
-                }
-            ]
+          "Direction": "less than",
+          "Name": "lower warning",
+          "Severity": 0,
+          "Value": 2000
         }
-    ]
+      ]
+    },
+    {
+      "Name": "Fan 2",
+      "Type": "AspeedFan",
+      "Connector": {
+        "Name": "Fan Connector 2",
+        "Pwm": 1,
+        "Tachs": [2, 3]
+      },
+      "Thresholds": [
+        {
+          "Direction": "less than",
+          "Name": "lower critical",
+          "Severity": 1,
+          "Value": 1000
+        },
+        {
+          "Direction": "less than",
+          "Name": "lower warning",
+          "Severity": 0,
+          "Value": 2000
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -404,23 +404,27 @@
 
 ```json
 {
-    "Name": "$bus Riser Card",
-    "Type": "Board",
-    "Probe": [
-        "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Riser Card Rev A'})",
-        "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Riser Card Rev B'})",
-        "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Riser Card Rev C'})"
-    ],
-    "Exposes": [
-        {
-            "Name": "$bus Riser Temp",
-            "Type": "TMP75",
-            "Bus": "$bus",
-            "Address": "0x48"
-        }
-    ]
+  "Name": "$bus Riser Card",
+  "Type": "Board",
+  "Probe": [
+    "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Riser Card Rev A'})",
+    "OR",
+    "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Riser Card Rev B'})",
+    "OR",
+    "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Riser Card Rev C'})"
+  ],
+  "Exposes": [
+    {
+      "Name": "$bus Riser Temp",
+      "Type": "TMP75",
+      "Bus": "$bus",
+      "Address": "0x48"
+    }
+  ]
 }
 ```
+
+> 💡 **建議**：使用明確的 `"OR"` 關鍵字分隔多個 Probe 條件，避免依賴陣列的隱含語義。詳見 [Probe 語法](ProbeSyntax.md) 中的說明。
 
 ---
 
@@ -432,17 +436,17 @@
 
 ```json
 {
-    "Name": "Slot $index Card",
-    "Type": "Board",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Expansion Card'})",
-    "Exposes": [
-        {
-            "Name": "Slot $index Card Temp",
-            "Type": "TMP75",
-            "Bus": "$bus",
-            "Address": "0x48"
-        }
-    ]
+  "Name": "Slot $index Card",
+  "Type": "Board",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Expansion Card'})",
+  "Exposes": [
+    {
+      "Name": "Slot $index Card Temp",
+      "Type": "TMP75",
+      "Bus": "$bus",
+      "Address": "0x48"
+    }
+  ]
 }
 ```
 
@@ -453,7 +457,7 @@
     i2c-switch@71 {
         compatible = "nxp,pca9546";
         reg = <0x71>;
-        
+
         i2c@0 {
             // 這裡的裝置會有新的匯流排編號
             // $bus 會對應此通道的編號
@@ -470,32 +474,32 @@
 
 ```json
 {
-    "Name": "Fan Control Zone 1",
-    "Type": "Pid.Zone",
-    "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Baseboard'})",
-    "Exposes": [
-        {
-            "Name": "Zone 1",
-            "Type": "Pid.Zone",
-            "ZoneID": 1,
-            "MinThermalOutput": 30,
-            "FailsafePercent": 100
-        },
-        {
-            "Name": "CPU Pid",
-            "Type": "Pid",
-            "Inputs": ["CPU Temperature"],
-            "Outputs": ["Fan 1", "Fan 2"],
-            "SetPoint": 70,
-            "PCoefficient": 0.5,
-            "ICoefficient": 0.1,
-            "DCoefficient": 0.0,
-            "OutLimitMax": 100,
-            "OutLimitMin": 30,
-            "SlewNeg": 10,
-            "SlewPos": 10
-        }
-    ]
+  "Name": "Fan Control Zone 1",
+  "Type": "Pid.Zone",
+  "Probe": "xyz.openbmc_project.FruDevice({'PRODUCT_PRODUCT_NAME': 'Baseboard'})",
+  "Exposes": [
+    {
+      "Name": "Zone 1",
+      "Type": "Pid.Zone",
+      "ZoneID": 1,
+      "MinThermalOutput": 30,
+      "FailsafePercent": 100
+    },
+    {
+      "Name": "CPU Pid",
+      "Type": "Pid",
+      "Inputs": ["CPU Temperature"],
+      "Outputs": ["Fan 1", "Fan 2"],
+      "SetPoint": 70,
+      "PCoefficient": 0.5,
+      "ICoefficient": 0.1,
+      "DCoefficient": 0.0,
+      "OutLimitMax": 100,
+      "OutLimitMin": 30,
+      "SlewNeg": 10,
+      "SlewPos": 10
+    }
+  ]
 }
 ```
 
@@ -509,17 +513,17 @@
 
 ```json
 {
-    "Name": "Debug Board",
-    "Type": "Board",
-    "Probe": "TRUE",
-    "Exposes": [
-        {
-            "Name": "Debug Sensor",
-            "Type": "TMP75",
-            "Bus": 1,
-            "Address": "0x48"
-        }
-    ]
+  "Name": "Debug Board",
+  "Type": "Board",
+  "Probe": "TRUE",
+  "Exposes": [
+    {
+      "Name": "Debug Sensor",
+      "Type": "TMP75",
+      "Bus": 1,
+      "Address": "0x48"
+    }
+  ]
 }
 ```
 

@@ -41,17 +41,17 @@
 
 ## dbus-sensors 守護程式列表
 
-| 守護程式 | 監聽的 Type | 功能 |
-|---------|------------|------|
-| `hwmontempsensor` | TMP75, TMP421, TMP441, TMP461 等 | hwmon 溫度感測器 |
-| `adcsensor` | ADC | ADC 電壓感測器 |
-| `fansensor` | AspeedFan, NuvotonFan 等 | 風扇轉速 (Tach) |
-| `psusensor` | PMBus 相關類型 | 電源供應器感測器 |
-| `cpusensor` | XeonCPU 等 | CPU 溫度（透過 PECI） |
-| `nvmesensor` | NVMe | NVMe SSD 溫度 |
-| `ipmb sensor` | IPMB 相關 | IPMB 感測器 |
-| `intrusionsensor` | Intrusion | 機箱入侵偵測 |
-| `exitairtempsensor` | CFM 相關 | 出風口溫度計算 |
+| 守護程式            | 監聽的 Type                      | 功能                  |
+| ------------------- | -------------------------------- | --------------------- |
+| `hwmontempsensor`   | TMP75, TMP421, TMP441, TMP461 等 | hwmon 溫度感測器      |
+| `adcsensor`         | ADC                              | ADC 電壓感測器        |
+| `fansensor`         | AspeedFan, NuvotonFan 等         | 風扇轉速 (Tach)       |
+| `psusensor`         | PMBus 相關類型                   | 電源供應器感測器      |
+| `cpusensor`         | XeonCPU 等                       | CPU 溫度（透過 PECI） |
+| `nvmesensor`        | NVMe                             | NVMe SSD 溫度         |
+| `ipmb sensor`       | IPMB 相關                        | IPMB 感測器           |
+| `intrusionsensor`   | Intrusion                        | 機箱入侵偵測          |
+| `exitairtempsensor` | CFM 相關                         | 出風口溫度計算        |
 
 ---
 
@@ -75,28 +75,40 @@ sequenceDiagram
     HTS->>DBUS: 發布 Sensor.Value<br/>Name="18 great local"
 ```
 
+> **逐步說明：**
+>
+> 1. **配置發布**：Entity-Manager 將 Probe 匹配成功的 Exposes 記錄以 `xyz.openbmc_project.Configuration.TMP441` 介面發布到 D-Bus，包含 Bus、Address、Name 等屬性
+> 2. **信號通知**：D-Bus 的 `InterfacesAdded` 信號通知所有訂閱者（包括 hwmontempsensor）
+> 3. **類型識別**：hwmontempsensor 檢查新增介面的 `Type` 屬性，確認是否為自己支援的類型（如 TMP441）
+> 4. **驅動綁定**：hwmontempsensor 向 `/sys/bus/i2c/devices/i2c-{Bus}/new_device` 寫入驅動名稱和位址，觸發 Linux kernel 載入對應的 hwmon 驅動
+> 5. **hwmon 建立**：kernel 驅動會在 `/sys/class/hwmon/` 下建立對應的 hwmon 介面
+> 6. **數值讀取**：hwmontempsensor 定期從 `/sys/class/hwmon/hwmon*/temp{N}_input` 讀取感測器數值
+> 7. **D-Bus 發布**：讀取到的數值以 `xyz.openbmc_project.Sensor.Value` 介面發布到 D-Bus
+>
+> **白話總結**：整個流程就像一條「供應鏈」— Entity-Manager 是「訂單中心」告訴感測器服務「哪裡有什麼東西」，感測器服務再去「安裝驅動程式」連接硬體，最後持續把讀到的數值「上架」到 D-Bus 讓其他應用使用。
+
 ### 支援的感測器類型
 
-| Type | Linux 驅動 | 通道數 |
-|------|-----------|-------|
-| TMP75 | tmp75 | 1 |
-| TMP175 | tmp75 | 1 |
-| TMP275 | tmp75 | 1 |
-| TMP421 | tmp421 | 2 |
-| TMP441 | tmp441 | 2 |
-| TMP461 | tmp461 | 2 |
-| EMC1403 | emc1403 | 3 |
-| LM75 | lm75 | 1 |
+| Type    | Linux 驅動 | 通道數 |
+| ------- | ---------- | ------ |
+| TMP75   | tmp75      | 1      |
+| TMP175  | tmp75      | 1      |
+| TMP275  | tmp75      | 1      |
+| TMP421  | tmp421     | 2      |
+| TMP441  | tmp441     | 2      |
+| TMP461  | tmp461     | 2      |
+| EMC1403 | emc1403    | 3      |
+| LM75    | lm75       | 1      |
 
 ### 多通道感測器命名
 
 對於多通道感測器，使用 `Name`, `Name1`, `Name2` 等屬性：
 
-| JSON 屬性 | hwmon 對應 | 說明 |
-|----------|-----------|------|
-| `Name` | temp1_input | 通道 0（通常是本地溫度） |
-| `Name1` | temp2_input | 通道 1（遠端溫度 1） |
-| `Name2` | temp3_input | 通道 2（遠端溫度 2） |
+| JSON 屬性 | hwmon 對應  | 說明                     |
+| --------- | ----------- | ------------------------ |
+| `Name`    | temp1_input | 通道 0（通常是本地溫度） |
+| `Name1`   | temp2_input | 通道 1（遠端溫度 1）     |
+| `Name2`   | temp3_input | 通道 2（遠端溫度 2）     |
 
 ---
 
@@ -120,14 +132,14 @@ sequenceDiagram
 
 **屬性**：
 
-| 屬性 | 類型 | 說明 |
-|-----|------|------|
-| `Value` | double | 目前感測器數值 |
-| `MaxValue` | double | 最大允許值 |
-| `MinValue` | double | 最小允許值 |
-| `Unit` | string | 單位（如 "DegreesC", "Volts"） |
+| 屬性       | 類型   | 說明                           |
+| ---------- | ------ | ------------------------------ |
+| `Value`    | double | 目前感測器數值                 |
+| `MaxValue` | double | 最大允許值                     |
+| `MinValue` | double | 最小允許值                     |
+| `Unit`     | string | 單位（如 "DegreesC", "Volts"） |
 
-### xyz.openbmc_project.Sensor.Threshold.*
+### xyz.openbmc_project.Sensor.Threshold.\*
 
 **介面**：
 
@@ -136,16 +148,16 @@ sequenceDiagram
 
 **屬性**：
 
-| 屬性 | 類型 | 說明 |
-|-----|------|------|
-| `CriticalHigh` | double | 嚴重上限 |
-| `CriticalLow` | double | 嚴重下限 |
-| `WarningHigh` | double | 警告上限 |
-| `WarningLow` | double | 警告下限 |
-| `CriticalAlarmHigh` | bool | 超過嚴重上限 |
-| `CriticalAlarmLow` | bool | 低於嚴重下限 |
-| `WarningAlarmHigh` | bool | 超過警告上限 |
-| `WarningAlarmLow` | bool | 低於警告下限 |
+| 屬性                | 類型   | 說明         |
+| ------------------- | ------ | ------------ |
+| `CriticalHigh`      | double | 嚴重上限     |
+| `CriticalLow`       | double | 嚴重下限     |
+| `WarningHigh`       | double | 警告上限     |
+| `WarningLow`        | double | 警告下限     |
+| `CriticalAlarmHigh` | bool   | 超過嚴重上限 |
+| `CriticalAlarmLow`  | bool   | 低於嚴重下限 |
+| `WarningAlarmHigh`  | bool   | 超過警告上限 |
+| `WarningAlarmLow`   | bool   | 低於警告下限 |
 
 ---
 
@@ -155,35 +167,35 @@ sequenceDiagram
 
 ```json
 {
-    "Name": "P12V",
-    "Type": "ADC",
-    "Index": 0,
-    "ScaleFactor": 6.8,
-    "PowerState": "Always",
-    "Thresholds": [
-        {
-            "Direction": "greater than",
-            "Name": "upper critical",
-            "Severity": 1,
-            "Value": 13.2
-        },
-        {
-            "Direction": "less than",
-            "Name": "lower critical",
-            "Severity": 1,
-            "Value": 10.8
-        }
-    ]
+  "Name": "P12V",
+  "Type": "ADC",
+  "Index": 0,
+  "ScaleFactor": 6.8,
+  "PowerState": "Always",
+  "Thresholds": [
+    {
+      "Direction": "greater than",
+      "Name": "upper critical",
+      "Severity": 1,
+      "Value": 13.2
+    },
+    {
+      "Direction": "less than",
+      "Name": "lower critical",
+      "Severity": 1,
+      "Value": 10.8
+    }
+  ]
 }
 ```
 
 ### 屬性說明
 
-| 屬性 | 說明 |
-|-----|------|
-| `Index` | ADC 通道索引（對應 in{Index}_input） |
-| `ScaleFactor` | 縮放因子（用於分壓電阻計算） |
-| `PowerState` | 電源狀態條件 |
+| 屬性          | 說明                                  |
+| ------------- | ------------------------------------- |
+| `Index`       | ADC 通道索引（對應 in{Index}\_input） |
+| `ScaleFactor` | 縮放因子（用於分壓電阻計算）          |
+| `PowerState`  | 電源狀態條件                          |
 
 ### 計算公式
 
@@ -199,31 +211,31 @@ sequenceDiagram
 
 ```json
 {
-    "Name": "System Fan 1",
-    "Type": "AspeedFan",
-    "Index": 0,
-    "Connector": {
-        "Name": "Fan Connector 1",
-        "Pwm": 0,
-        "Tachs": [0, 1]
-    },
-    "Thresholds": [
-        {
-            "Direction": "less than",
-            "Name": "lower critical",
-            "Severity": 1,
-            "Value": 1000
-        }
-    ]
+  "Name": "System Fan 1",
+  "Type": "AspeedFan",
+  "Index": 0,
+  "Connector": {
+    "Name": "Fan Connector 1",
+    "Pwm": 0,
+    "Tachs": [0, 1]
+  },
+  "Thresholds": [
+    {
+      "Direction": "less than",
+      "Name": "lower critical",
+      "Severity": 1,
+      "Value": 1000
+    }
+  ]
 }
 ```
 
 ### 屬性說明
 
-| 屬性 | 說明 |
-|-----|------|
-| `Index` | 風扇索引 |
-| `Connector.Pwm` | PWM 控制通道 |
+| 屬性              | 說明           |
+| ----------------- | -------------- |
+| `Index`           | 風扇索引       |
+| `Connector.Pwm`   | PWM 控制通道   |
 | `Connector.Tachs` | 轉速計通道陣列 |
 
 ---
@@ -232,12 +244,12 @@ sequenceDiagram
 
 控制感測器在不同電源狀態下的行為：
 
-| 值 | 說明 | 使用場景 |
-|----|------|---------|
-| `"Always"` | 始終輪詢（預設） | 環境溫度、電壓 |
-| `"On"` | 僅主機開機時輪詢 | CPU 溫度、記憶體溫度 |
-| `"BiosPost"` | BIOS POST 期間輪詢 | 特定 POST 感測器 |
-| `"Chassis"` | 機箱電源開啟時 | 機箱相關感測器 |
+| 值           | 說明               | 使用場景             |
+| ------------ | ------------------ | -------------------- |
+| `"Always"`   | 始終輪詢（預設）   | 環境溫度、電壓       |
+| `"On"`       | 僅主機開機時輪詢   | CPU 溫度、記憶體溫度 |
+| `"BiosPost"` | BIOS POST 期間輪詢 | 特定 POST 感測器     |
+| `"Chassis"`  | 機箱電源開啟時     | 機箱相關感測器       |
 
 ---
 
@@ -297,11 +309,11 @@ busctl get-property xyz.openbmc_project.HwmonTempSensor \
 
 ```json
 {
-    "Name": "$bus great local",
-    "Name1": "$bus great ext",
-    "Type": "TMP441",
-    "Bus": "$bus",
-    "Address": "0x4c"
+  "Name": "$bus great local",
+  "Name1": "$bus great ext",
+  "Type": "TMP441",
+  "Bus": "$bus",
+  "Address": "0x4c"
 }
 ```
 
@@ -370,14 +382,14 @@ busctl get-property xyz.openbmc_project.HwmonTempSensor \
 
 ```json
 {
-    "Thresholds": [
-        {
-            "Direction": "greater than",  // 必須小寫
-            "Name": "upper critical",     // 必須符合規範
-            "Severity": 1,                // 0 或 1
-            "Value": 100                  // 數值
-        }
-    ]
+  "Thresholds": [
+    {
+      "Direction": "greater than", // 必須小寫
+      "Name": "upper critical", // 必須符合規範
+      "Severity": 1, // 0 或 1
+      "Value": 100 // 數值
+    }
+  ]
 }
 ```
 

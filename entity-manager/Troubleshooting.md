@@ -10,24 +10,24 @@
 
 ### 基本指令
 
-| 指令 | 用途 |
-|-----|------|
-| `busctl tree <service>` | 查看服務的物件樹 |
-| `busctl introspect <service> <path>` | 查看物件詳情 |
-| `busctl get-property <service> <path> <iface> <prop>` | 讀取屬性 |
-| `busctl monitor <service>` | 監聽服務信號 |
-| `systemctl status <service>` | 檢查服務狀態 |
-| `journalctl -u <service>` | 查看服務日誌 |
+| 指令                                                  | 用途             |
+| ----------------------------------------------------- | ---------------- |
+| `busctl tree <service>`                               | 查看服務的物件樹 |
+| `busctl introspect <service> <path>`                  | 查看物件詳情     |
+| `busctl get-property <service> <path> <iface> <prop>` | 讀取屬性         |
+| `busctl monitor <service>`                            | 監聽服務信號     |
+| `systemctl status <service>`                          | 檢查服務狀態     |
+| `journalctl -u <service>`                             | 查看服務日誌     |
 
 ### Entity-Manager 相關服務
 
-| 服務名稱 | systemd 服務 |
-|---------|-------------|
-| Entity-Manager | `xyz.openbmc_project.EntityManager.service` |
-| FruDevice | `xyz.openbmc_project.FruDevice.service` |
+| 服務名稱        | systemd 服務                                  |
+| --------------- | --------------------------------------------- |
+| Entity-Manager  | `xyz.openbmc_project.EntityManager.service`   |
+| FruDevice       | `xyz.openbmc_project.FruDevice.service`       |
 | hwmontempsensor | `xyz.openbmc_project.hwmontempsensor.service` |
-| ADCSensor | `xyz.openbmc_project.adcsensor.service` |
-| FanSensor | `xyz.openbmc_project.fansensor.service` |
+| ADCSensor       | `xyz.openbmc_project.adcsensor.service`       |
+| FanSensor       | `xyz.openbmc_project.fansensor.service`       |
 
 ---
 
@@ -68,12 +68,12 @@
 
 #### 常見原因與解決方案
 
-| 原因 | 解決方案 |
-|-----|---------|
-| JSON 語法錯誤 | 修正 JSON 格式 |
-| 配置檔不在正確位置 | 移動到 `/usr/share/entity-manager/configurations/` |
-| Probe 不匹配 | 檢查 FruDevice 資料是否符合 Probe |
-| 服務未啟動 | `systemctl start xyz.openbmc_project.EntityManager.service` |
+| 原因               | 解決方案                                                    |
+| ------------------ | ----------------------------------------------------------- |
+| JSON 語法錯誤      | 修正 JSON 格式                                              |
+| 配置檔不在正確位置 | 移動到 `/usr/share/entity-manager/configurations/`          |
+| Probe 不匹配       | 檢查 FruDevice 資料是否符合 Probe                           |
+| 服務未啟動         | `systemctl start xyz.openbmc_project.EntityManager.service` |
 
 ---
 
@@ -155,12 +155,12 @@
 
 #### 常見原因
 
-| 原因 | 解決方案 |
-|-----|---------|
-| I2C 控制器未啟用 | 檢查裝置樹 |
-| EEPROM 位址錯誤 | 確認正確的 I2C 位址 |
-| FRU 格式無效 | 檢查 FRU 資料格式 |
-| 位址大小誤判 | 參見 [EEPROM 偵測](EEPROMDetection.md) |
+| 原因             | 解決方案                               |
+| ---------------- | -------------------------------------- |
+| I2C 控制器未啟用 | 檢查裝置樹                             |
+| EEPROM 位址錯誤  | 確認正確的 I2C 位址                    |
+| FRU 格式無效     | 檢查 FRU 資料格式                      |
+| 位址大小誤判     | 參見 [EEPROM 偵測](EEPROMDetection.md) |
 
 ---
 
@@ -203,12 +203,12 @@
 
 #### 常見原因
 
-| 原因 | 解決方案 |
-|-----|---------|
-| Type 不被感測器服務識別 | 確認 Type 名稱正確 |
-| 驅動未載入 | 檢查 kernel 日誌 |
-| 電源狀態條件不滿足 | 檢查 PowerState 設定 |
-| 匯流排/位址錯誤 | 驗證 Bus 和 Address |
+| 原因                    | 解決方案             |
+| ----------------------- | -------------------- |
+| Type 不被感測器服務識別 | 確認 Type 名稱正確   |
+| 驅動未載入              | 檢查 kernel 日誌     |
+| 電源狀態條件不滿足      | 檢查 PowerState 設定 |
+| 匯流排/位址錯誤         | 驗證 Bus 和 Address  |
 
 ---
 
@@ -225,7 +225,7 @@
 
    ```bash
    top -p $(pgrep entity-manager)
-   
+
    # 暫時停止服務
    systemctl stop xyz.openbmc_project.EntityManager.service
    # 觀察資源使用是否下降
@@ -282,19 +282,22 @@ systemctl restart xyz.openbmc_project.EntityManager.service
 
 #### 原因
 
-GitHub Issue #24：解析器可能將屬性值中的 "OR" 誤解為邏輯運算子。
+GitHub Issue #24：`findProbeType()` 函數使用子字串搜尋，可能將屬性值中的 "OR"、"AND" 等保留字誤識別為邏輯運算子。
+
+> 📝 **Source**：`perform_probe.cpp` L221-243 中的 `findProbeType()` 使用 `probe.find(probeType->first)` 進行子字串搜尋。
 
 #### 解決方案
 
-- 避免在屬性值中使用 "OR"、"AND" 等保留字
-- 如需 OR 邏輯，使用陣列語法：
+- 避免在屬性值中使用 "OR"、"AND"、"TRUE"、"FALSE"、"FOUND"、"MATCH_ONE" 等保留字
+- 如需 OR 邏輯，使用明確的 `"OR"` 關鍵字：
 
   ```json
   {
-      "Probe": [
-          "xyz.openbmc_project.FruDevice({'PRODUCT': 'TypeA'})",
-          "xyz.openbmc_project.FruDevice({'PRODUCT': 'TypeB'})"
-      ]
+    "Probe": [
+      "xyz.openbmc_project.FruDevice({'PRODUCT': 'TypeA'})",
+      "OR",
+      "xyz.openbmc_project.FruDevice({'PRODUCT': 'TypeB'})"
+    ]
   }
   ```
 
@@ -384,13 +387,13 @@ done
 
 ### 常見問題速查表
 
-| 問題 | 檢查項目 | 指令 |
-|-----|---------|------|
-| 無配置 | 服務狀態、JSON 語法 | `systemctl status`, `python -m json.tool` |
-| Probe 不匹配 | FRU 屬性值 | `busctl get-property` |
-| 無 FRU | I2C 裝置 | `i2cdetect -y <bus>` |
-| 無感測器 | 配置發布、hwmon | `busctl tree`, `ls /sys/class/hwmon/` |
-| 高 CPU | 服務狀態 | `top`, `systemctl stop` |
+| 問題         | 檢查項目            | 指令                                      |
+| ------------ | ------------------- | ----------------------------------------- |
+| 無配置       | 服務狀態、JSON 語法 | `systemctl status`, `python -m json.tool` |
+| Probe 不匹配 | FRU 屬性值          | `busctl get-property`                     |
+| 無 FRU       | I2C 裝置            | `i2cdetect -y <bus>`                      |
+| 無感測器     | 配置發布、hwmon     | `busctl tree`, `ls /sys/class/hwmon/`     |
+| 高 CPU       | 服務狀態            | `top`, `systemctl stop`                   |
 
 ---
 

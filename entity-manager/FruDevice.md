@@ -18,11 +18,11 @@
 
 ## D-Bus 服務資訊
 
-| 項目 | 值 |
-|-----|---|
-| **服務名稱** | `xyz.openbmc_project.FruDevice` |
+| 項目             | 值                                      |
+| ---------------- | --------------------------------------- |
+| **服務名稱**     | `xyz.openbmc_project.FruDevice`         |
 | **systemd 服務** | `xyz.openbmc_project.FruDevice.service` |
-| **根路徑** | `/xyz/openbmc_project/FruDevice` |
+| **根路徑**       | `/xyz/openbmc_project/FruDevice`        |
 
 ---
 
@@ -51,11 +51,45 @@ flowchart TD
     L -->|否| K
 ```
 
+> **逐步說明：**
+>
+> 1. **啟動**：`fru-device` 以 systemd 服務啟動，建立 D-Bus 連線並宣告服務名稱 `xyz.openbmc_project.FruDevice`
+> 2. **列舉 I2C 匯流排**：`findI2CDevices()` 列舉 `/dev/i2c-*` 裝置，並過濾掉 blocklist 中的匯流排
+> 3. **EEPROM 偵測**：`findI2CEeproms()` 在 sysfs 中搜尋已知的 eeprom 裝置檔案（`/sys/bus/i2c/devices/{bus}-{addr}/eeprom`）
+> 4. **位址掃描**：`getBusFRUs()` 對每個匯流排的預設 FRU 位址範圍（通常 0x50-0x57）發起 I2C 讀取
+> 5. **位址大小偵測**：`isDevice16Bit()` 根據編譯時配置選擇 MODE-1 或 MODE-2 演算法來判斷 EEPROM 是 8-bit 還是 16-bit 位址
+> 6. **FRU 讀取**：使用 `readData()` 讀取 EEPROM 內容，由 `processEeprom()` 處理 sysfs eeprom 檔案路徑
+> 7. **FRU 驗證**：FRU Common Header 的第一個 byte 必須為 `0x01`（IPMI FRU 規範版本），且校驗和必須正確
+> 8. **FRU 解析**：`fru_utils.cpp` 中的函數解析各 Area（Product、Board、Chassis、Multi-Record）的欄位
+> 9. **D-Bus 發布**：解析結果以 `xyz.openbmc_project.FruDevice` 介面發布到 D-Bus
+> 10. **監聽變更**：使用 inotify 監聽 `/dev/i2c-*` 的新增（如 I2C Mux 被創建時），觸發重新掃描
+>
+> **白話總結**：fru-device 就像一個「郵遞員」—— 每天（啟動時）遍歷所有郵箱（I2C 匯流排），檢查有沒有信件（EEPROM），拆開信封讀取內容（解析 FRU），然後抄寫一份貴送到布告欄（D-Bus）。如果有新的郵箱出現（I2C Mux），就再跑一趨。
+
 ### 核心函數
 
-1. **rescanBusses()**：執行初始掃描和重新掃描
-2. **isDevice16Bit()**：判斷 EEPROM 是 8 位元還是 16 位元位址
-3. **parseFRU()**：解析 IPMI FRU 格式資料
+以下函數定義在 [`fru_device.cpp`](file:///data/leo/src/entity-manager/src/fru_device/fru_device.cpp)：
+
+| 函數                   | 行號     | 功能                                                      |
+| ---------------------- | -------- | --------------------------------------------------------- |
+| `findI2CDevices()`     | L772-843 | 列舉所有 `/dev/i2c-*` 裝置，過濾 blocklist，建立 `BusMap` |
+| `findI2CEeproms()`     | L371-438 | 在 sysfs 中搜尋已知的 eeprom 檔案，回傳發現的位址集合     |
+| `getBusFRUs()`         | L440-611 | 對指定 I2C 匯流排的位址範圍偵測 FRU 裝置                  |
+| `processEeprom()`      | L345-369 | 讀取 sysfs eeprom 檔案並回傳 raw 資料                     |
+| `isDevice16Bit()`      | L333-343 | 位址大小偵測（轉發至 Mode1 或 Mode2）                     |
+| `isDevice16BitMode1()` | L254-290 | MODE-1 位址大小偵測演算法                                 |
+| `isDevice16BitMode2()` | L292-331 | MODE-2 位址大小偵測演算法（較準確）                       |
+| `readData()`           | L222-252 | 從 EEPROM 讀取指定偏移量的資料                            |
+| `makeProbeInterface()` | L167-187 | 為 I2C 裝置建立 Probe 用的 D-Bus 介面                     |
+| `loadBlocklist()`      | L681-770 | 載入匯流排/位址黑名單                                     |
+| `updateFruProperty()`  | L77-85   | 更新 FRU 屬性到 D-Bus                                     |
+
+以下函數定義在 [`fru_utils.cpp`](file:///data/leo/src/entity-manager/src/fru_device/fru_utils.cpp)：
+
+| 函數                       | 功能                             |
+| -------------------------- | -------------------------------- |
+| `parseFRU()` 相關函數      | 解析 IPMI FRU 格式的各 Area 欄位 |
+| `formatIPMIFRU()` 相關函數 | 將 FRU 資料格式化為 D-Bus 屬性   |
 
 ---
 
@@ -81,16 +115,16 @@ flowchart TD
 
 ### Common Header 格式
 
-| 位元組 | 欄位 | 說明 |
-|-------|------|------|
-| 0 | Format Version | 格式版本（目前為 0x01） |
-| 1 | Internal Use Offset | 內部使用區偏移 |
-| 2 | Chassis Info Offset | 機箱資訊區偏移 |
-| 3 | Board Info Offset | 電路板資訊區偏移 |
-| 4 | Product Info Offset | 產品資訊區偏移 |
-| 5 | Multi-Record Offset | 多記錄區偏移 |
-| 6 | PAD | 填充（0x00） |
-| 7 | Checksum | 校驗和 |
+| 位元組 | 欄位                | 說明                    |
+| ------ | ------------------- | ----------------------- |
+| 0      | Format Version      | 格式版本（目前為 0x01） |
+| 1      | Internal Use Offset | 內部使用區偏移          |
+| 2      | Chassis Info Offset | 機箱資訊區偏移          |
+| 3      | Board Info Offset   | 電路板資訊區偏移        |
+| 4      | Product Info Offset | 產品資訊區偏移          |
+| 5      | Multi-Record Offset | 多記錄區偏移            |
+| 6      | PAD                 | 填充（0x00）            |
+| 7      | Checksum            | 校驗和                  |
 
 ---
 
@@ -110,38 +144,38 @@ flowchart TD
 
 **核心屬性**：
 
-| 屬性 | 類型 | 說明 |
-|-----|------|------|
-| `BUS` | uint32 | I2C 匯流排編號 |
-| `ADDRESS` | uint32 | I2C 裝置位址 |
+| 屬性      | 類型   | 說明           |
+| --------- | ------ | -------------- |
+| `BUS`     | uint32 | I2C 匯流排編號 |
+| `ADDRESS` | uint32 | I2C 裝置位址   |
 
 **產品資訊欄位**：
 
-| 屬性 | 說明 |
-|-----|------|
-| `PRODUCT_PRODUCT_NAME` | 產品名稱 |
-| `PRODUCT_MANUFACTURER` | 製造商 |
-| `PRODUCT_PART_NUMBER` | 料號 |
-| `PRODUCT_SERIAL_NUMBER` | 序號 |
-| `PRODUCT_VERSION` | 版本 |
-| `PRODUCT_ASSET_TAG` | 資產標籤 |
+| 屬性                     | 說明        |
+| ------------------------ | ----------- |
+| `PRODUCT_PRODUCT_NAME`   | 產品名稱    |
+| `PRODUCT_MANUFACTURER`   | 製造商      |
+| `PRODUCT_PART_NUMBER`    | 料號        |
+| `PRODUCT_SERIAL_NUMBER`  | 序號        |
+| `PRODUCT_VERSION`        | 版本        |
+| `PRODUCT_ASSET_TAG`      | 資產標籤    |
 | `PRODUCT_FRU_VERSION_ID` | FRU 版本 ID |
 
 **電路板資訊欄位**：
 
-| 屬性 | 說明 |
-|-----|------|
-| `BOARD_PRODUCT_NAME` | 電路板名稱 |
-| `BOARD_MANUFACTURER` | 電路板製造商 |
-| `BOARD_PART_NUMBER` | 電路板料號 |
-| `BOARD_SERIAL_NUMBER` | 電路板序號 |
+| 屬性                  | 說明         |
+| --------------------- | ------------ |
+| `BOARD_PRODUCT_NAME`  | 電路板名稱   |
+| `BOARD_MANUFACTURER`  | 電路板製造商 |
+| `BOARD_PART_NUMBER`   | 電路板料號   |
+| `BOARD_SERIAL_NUMBER` | 電路板序號   |
 
 **機箱資訊欄位**：
 
-| 屬性 | 說明 |
-|-----|------|
-| `CHASSIS_TYPE` | 機箱類型 |
-| `CHASSIS_PART_NUMBER` | 機箱料號 |
+| 屬性                    | 說明     |
+| ----------------------- | -------- |
+| `CHASSIS_TYPE`          | 機箱類型 |
+| `CHASSIS_PART_NUMBER`   | 機箱料號 |
 | `CHASSIS_SERIAL_NUMBER` | 機箱序號 |
 
 ---
@@ -226,14 +260,14 @@ busctl call xyz.openbmc_project.FruDevice \
 
 &i2c1 {
     status = "okay";
-    
+
     // I2C Mux 配置
     i2c-switch@71 {
         compatible = "nxp,pca9546";
         reg = <0x71>;
         #address-cells = <1>;
         #size-cells = <0>;
-        
+
         i2c@0 {
             #address-cells = <1>;
             #size-cells = <0>;
@@ -257,13 +291,15 @@ fru-device 需要判斷 EEPROM 使用 8 位元還是 16 位元位址：
 
 ### MODE-1（傳統方式）
 
-讀取 8 個連續位元組，如果值相同則判斷為 8 位元，不同則為 16 位元。
+讀取 8 個連續位元組，如果值相同則判斷為 8 位元，不同則為 16 位元。實作在 `isDevice16BitMode1()` (`fru_device.cpp` L254-290)。
 
 **問題**：某些 16 位元 EEPROM（如 ONSEMI）在前 8 個位置有相同資料時會被誤判。
 
 ### MODE-2（改進方式）
 
-使用禁止 STOP 條件的 2 位元組寫入操作，更準確地偵測位址大小。
+使用禁止 STOP 條件的 2 位元組寫入操作，更準確地偵測位址大小。實作在 `isDevice16BitMode2()` (`fru_device.cpp` L292-331)。
+
+**選擇邏輯**（`isDevice16Bit()` L333-343）：編譯時的 Meson 選項 `FRU_DEVICE_16BITDETECTMODE` 決定使用哪個模式。
 
 詳見 [EEPROM 偵測](EEPROMDetection.md)。
 
@@ -296,10 +332,10 @@ fru-device 需要判斷 EEPROM 使用 8 位元還是 16 位元位址：
 
 Entity-Manager 從 FruDevice 物件提取這些變數供配置使用：
 
-| 變數 | 來源屬性 |
-|-----|---------|
-| `$bus` | `BUS` |
-| `$address` | `ADDRESS` |
+| 變數                      | 來源屬性               |
+| ------------------------- | ---------------------- |
+| `$bus`                    | `BUS`                  |
+| `$address`                | `ADDRESS`              |
 | `${PRODUCT_PRODUCT_NAME}` | `PRODUCT_PRODUCT_NAME` |
 | `${PRODUCT_MANUFACTURER}` | `PRODUCT_MANUFACTURER` |
 
@@ -316,7 +352,7 @@ Entity-Manager 從 FruDevice 物件提取這些變數供配置使用：
    ```bash
    # 列出可用的 I2C 匯流排
    ls /dev/i2c-*
-   
+
    # 掃描特定匯流排
    i2cdetect -y 1
    ```
@@ -374,5 +410,7 @@ ipmitool fru print
 ---
 
 > 📖 **參考**：
+>
 > - [IPMI FRU 規範](https://www.intel.com/content/dam/www/public/us/en/documents/specification-updates/ipmi-platform-mgt-fru-info-storage-def-v1-0-rev-1-3-spec-update.pdf)
-> - [Entity-Manager fru_device.cpp](https://github.com/openbmc/entity-manager/blob/master/src/fru_device.cpp)
+> - [fru_device.cpp](file:///data/leo/src/entity-manager/src/fru_device/fru_device.cpp)
+> - [fru_utils.cpp](file:///data/leo/src/entity-manager/src/fru_device/fru_utils.cpp)
