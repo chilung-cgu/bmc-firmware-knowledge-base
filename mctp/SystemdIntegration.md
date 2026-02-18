@@ -56,64 +56,87 @@ WantedBy=multi-user.target
 
 ---
 
-## 啟動順序
+## 啟動順序與完成狀態 (Start Order vs. Active State)
+
+Systemd 的依賴管理核心在於區分「啟動指令發出 (Start Job)」與「服務就緒 (Active State)」。正確理解兩者的區別，是避免依賴問題（如 pldmd 啟動失敗）的關鍵。
+
+### 重要觀念：啟動 vs. 完成
+
+| 階段                    | 定義                                                          | Systemd 指令對應                                                                      |
+| :---------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------------------------ |
+| **啟動順序 (Ordering)** | 決定 Systemd **何時發出啟動指令**。                           | `After=`, `Before=`                                                                   |
+| **完成狀態 (Active)**   | 決定 Systemd **何時判定該服務已就緒**，解除對後續依賴的阻塞。 | `Type=oneshot` (腳本結束)<br>`Type=dbus` (Bus Name 出現)<br>`Type=notify` (sd_notify) |
+
+> [!IMPORTANT]
+> **為什麼 Type 很重要？**
+> 若服務配置為 `Type=simple` (預設)，Systemd 會在發出 fork 指令後**立即**視為完成 (Active)。若後續服務真的需要該服務完全初始化（例如 socket 綁定或 DBus 註冊完畢），就可能發生 Race Condition。因此 mctpd 使用 `Type=dbus` 至關重要，這保證了後續依賴者啟動時，MCTP D-Bus 服務絕對可用。
+
+### 時序圖解
+
+以下時序圖展示了從 Systemd 啟動到上層應用可用的完整流程，清楚標示了「等待」發生的時刻與「就緒」的條件：
 
 ```mermaid
-graph TD
-    subgraph "System Boot"
-        MUT[multi-user.target]
+sequenceDiagram
+    participant System as System Boot<br/>(multi-user.target)
+    participant HW as mctp-local-setup.service<br/>(Type=oneshot)
+    participant LocalT as mctp-local.target
+    participant Daemon as mctpd.service<br/>(Type=dbus)
+    participant MainT as mctp.target
+    participant App as pldmd.service<br/>(Consumer)
+
+    Note over System: 1. 系統啟動
+
+    rect rgb(240, 248, 255)
+        Note right of System: 硬體初始化階段
+        System->>LocalT: Wants (觸發)
+        LocalT->>HW: Before=LocalT (HW 先啟動)
+        activate HW
+        Note right of HW: 執行硬體設定腳本...<br/>(設定 I2C, EID)
+        HW-->>HW: 腳本結束 (Exit 0)
+        deactivate HW
+        Note right of HW: Service Active (Completed)
+
+        HW->>LocalT: 依賴達成
+        activate LocalT
+        Note right of LocalT: Target Reached (Active)
     end
 
-    subgraph "MCTP Infrastructure"
-        MT[mctp.target]
-        MLT[mctp-local.target]
-        MLS[mctp-local-setup.service]
-        MCTPD[mctpd.service]
+    rect rgb(255, 248, 240)
+        Note right of System: 守護行程啟動階段
+        LocalT->>Daemon: After=LocalT (Daemon 後啟動)
+        activate Daemon
+        Note right of Daemon: mctpd 啟動...<br/>請求 D-Bus Name
+        Daemon-->>Daemon: 取得 au.com.codeconstruct.MCTP1
+        Note right of Daemon: Service Active (Ready)
     end
 
-    subgraph "MCTP Consumers"
-        PLDM[pldmd.service]
-        OTHER[其他服務...]
-    end
+    rect rgb(240, 255, 240)
+        Note right of System: 應用程式階段
+        Daemon->>MainT: (隱含或明確 Before=)
+        activate MainT
+        Note right of MainT: Target Reached (Active)
 
-    MUT --> MT
-    MT --> MLT
-    MT --> MCTPD
-    MLT --> MLS
-    MLS --> MCTPD
-    MT --> PLDM
-    MT --> OTHER
+        MainT->>App: After=MainT (App 後啟動)
+        activate App
+        Note right of App: pldmd 啟動<br/>(此時確保 MCTP 已可用)
+    end
 ```
 
-> **逐步說明：**
->
-> 這張圖展示 MCTP 相關服務在 systemd 中的啟動順序：
->
-> 1. **multi-user.target**：系統正常開機完成後的目標。
-> 2. **mctp.target**：所有 MCTP 基礎設施就緒的「里程碑」。其他需要 MCTP 的服務（如 pldmd）都等待這個 target。
-> 3. **mctp-local.target**：本地 MCTP 設定完成的「里程碑」。
-> 4. **mctp-local-setup.service**：（由平台廠商提供）負責設定 MCTP 介面、分配本地 EID 等。這個服務必須先完成，mctpd 才能啟動。
-> 5. **mctpd.service**：MCTP 控制協議守護程式，在本地設定完成後啟動。
-> 6. **pldmd.service 和其他服務**：在 `mctp.target` 就緒後才啟動，確保 MCTP 通訊已可用。
->
-> **白話總結**：啟動順序是「先設定硬體 → 再啟動 mctpd → 最後啟動上層服務」，就像蓋房子要先打地基（硬體設定）、再蓋結構（mctpd）、最後裝潢入住（pldmd 等）。
+### 依賴鏈解析
 
-### 啟動階段
+1.  **硬體設定 (HW Setup)**：
+    - `mctp-local-setup.service` (`Type=oneshot`) 必須執行完畢（Exit code 0），Systemd 才會認為它 "Active"。
+    - `mctp-local.target` 等待 setup 完成後，狀態轉為 "Reached"。
+    - **意義**：確保在啟動 daemon 之前，硬體介面（如 I2C）已經存在且設定正確。
 
-1. **mctp-local-setup.service**（可選，由平台提供）
-   - 設定本地 MCTP 介面
-   - 分配本地 EID
-   - 設定 bus-owner 地址
+2.  **守護行程 (Daemon)**：
+    - `mctpd.service` 設定了 `After=mctp-local.target`，所以直到 Target Reached 才會被執行啟動指令。
+    - 關鍵點：`Type=dbus`。Systemd 會**一直等待**直到 D-Bus 上出現 `au.com.codeconstruct.MCTP1` 這個名稱，才將 `mctpd.service` 標記為 "Active"。
+    - **意義**：確保當依賴它的服務啟動時，呼叫 D-Bus 方法不會失敗。
 
-2. **mctp-local.target**（專案已附帶於 `conf/mctp-local.target`）
-   - 表示本地 MCTP 堆疊已配置
-
-3. **mctpd.service**
-   - 啟動 MCTP 控制協議守護程式
-   - 開始提供 D-Bus 服務
-
-4. **mctp.target**
-   - 表示 MCTP 基礎設施完全就緒
+3.  **上層應用 (Consumer)**：
+    - `pldmd` 等服務設定 `After=mctp.target`。
+    - **安全建議**：為了確保絕對安全，建議檢查 `mctpd.service` 是否有 `Before=mctp.target`，或者讓 Consumer 直接 `After=mctpd.service`。若僅依賴 Target，需確認 Target 與 Service 間有明確的 Ordering 關係，否則理論上 `mctp.target` 可能在 `mctpd` 還在初始化的微小時間窗口內就 Reached 了。
 
 ---
 
@@ -333,6 +356,73 @@ systemctl list-dependencies mctpd.service
 # 確認 target 狀態
 systemctl status mctp-local.target
 ```
+
+---
+
+## 依賴分析與除錯 (Dependency Analysis & Troubleshooting)
+
+### 反向依賴樹 (Reverse Dependency Tree)
+
+當我們想知道「如果不啟動 `mctp-local.target`，會有誰受到影響？」時，可以使用 `systemctl list-dependencies --reverse` 指令。這有助於理解服務在系統中的影響範圍。
+
+```bash
+root@bmc:~# systemctl list-dependencies mctp-local.target --reverse
+mctp-local.target
+● ├─mctpd.service
+● └─mctp.target
+●   └─multi-user.target
+```
+
+**解讀：**
+
+1.  **`mctpd.service`**：依賴 `mctp-local.target`（需要本地硬體就緒）。
+2.  **`mctp.target`**：也依賴 `mctp-local.target`（基礎設施包含本地部分）。
+3.  **`multi-user.target`**：最終依賴 `mctp.target`，代表系統完全啟動包含 MCTP 功能。
+
+### 重要指令比較：`cat` vs `systemctl cat`
+
+在 OpenBMC 環境中，這是最容易讓人困惑的地方。**永遠優先使用 `systemctl cat`**，而非直接 `cat` 檔案。
+
+| 指令                                    | 顯示內容                                                    | 適用場景                             |
+| :-------------------------------------- | :---------------------------------------------------------- | :----------------------------------- |
+| `cat /lib/systemd/system/mctpd.service` | 僅顯示**最原始的 Unit 檔案**內容。                          | 檢視上游原始碼定義。                 |
+| `systemctl cat mctpd.service`           | 顯示**原始檔案 + 所有 Drop-in 設定 (`.conf`)** 的最終結果。 | **除錯、確認實際運作行為（推薦）。** |
+
+#### 為什麼輸出不同？
+
+Systemd 允許透過 `mctpd.service.d/*.conf` 目錄下的檔案來「增補」設定，而不需要修改原始檔案。這在 OpenBMC 的 Yocto 架構中非常常見（例如：由不同 Layer 注入特定的平台設定）。
+
+**範例分析：**
+
+```ini
+# systemctl cat mctpd.service 的輸出範例
+
+# 1. 原始定義 (來自 /lib/systemd/system/mctpd.service)
+[Unit]
+Description=MCTP control protocol daemon
+Wants=mctp-local.target
+After=mctp-local.target
+
+# ... (省略) ...
+
+# 2. 增補設定 A (來自 setup-local-eid.conf)
+# 這裡注入了對 Entity Manager 的依賴！
+[Unit]
+After=xyz.openbmc_project.EntityManager.service
+Requires=xyz.openbmc_project.EntityManager.service
+
+[Service]
+ExecStartPre=-/usr/libexec/mctp/mctp-config
+
+# 3. 增補設定 B (來自 wantedby.conf)
+# 這裡定義了 pldmd 需要它
+[Install]
+WantedBy=pldmd.service
+```
+
+> [!WARNING]
+> **隱藏的依賴陷阱**
+> 如果只看原始檔案，你永遠不會知道 `mctpd` 其實依賴 `EntityManager`。這就是為什麼「直接 cat 檔案」可能導致除錯方向錯誤的主因。
 
 ---
 
