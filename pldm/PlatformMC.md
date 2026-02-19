@@ -299,17 +299,17 @@ class EventManager {
 sequenceDiagram
     participant SM as SensorManager
     participant TM as TerminusManager
-    participant MCTP as MCTP
+    participant MCTP as Kernel MCTP Stack<br/>(AF_MCTP socket)
     participant Device as PLDM Device
 
     loop Per-TID 輪詢迴圈
         SM->>SM: 檢查 availableState[tid]
         loop Round Robin (每個 Sensor)
             SM->>TM: sendRecvPldmMsg(tid, GetSensorReading)
-            TM->>MCTP: 發送 PLDM 請求
+            TM->>MCTP: sendto(AF_MCTP socket, EID=x)
             MCTP->>Device: Request
             Device->>MCTP: Response
-            MCTP->>TM: Response
+            MCTP->>TM: recvfrom(AF_MCTP socket)
             TM->>SM: Reading Value
             SM->>SM: sensor->updateReading() → 更新 D-Bus
         end
@@ -323,7 +323,7 @@ sequenceDiagram
 >
 > 1. **Per-TID 輪詢迴圈**：每個 Terminus 有獨立的輪詢計時器。
 > 2. **檢查可用性**：先確認 Terminus 是否仍然可用。
-> 3. **Round Robin 讀取**：對該 Terminus 的每個 Sensor 輪流發送 `GetSensorReading`。
+> 3. **Round Robin 讀取**：對該 Terminus 的每個 Sensor 輪流發送 `GetSensorReading`。TerminusManager 透過 AF_MCTP socket **直接**將 PLDM 請求發送到 Kernel MCTP Stack，Kernel 負責實體傳輸（不需要 mctpd 中繼）。
 > 4. **更新 D-Bus**：收到讀數後，透過 `sensor->updateReading()` 更新 D-Bus 上的 Sensor 值。
 > 5. **等待間隔**：讀完一輪後等待 `pollingTime` 毫秒再讀下一輪。
 >

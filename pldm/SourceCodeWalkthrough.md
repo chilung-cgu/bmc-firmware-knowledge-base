@@ -311,7 +311,7 @@ BMC 作為 Requester（主動發請求）時的核心管理器：
 sequenceDiagram
     participant Caller as 呼叫者（如 HostPDRHandler）
     participant Handler as Handler<Request>
-    participant MCTP as MCTP Transport
+    participant MCTP as PldmTransport<br/>(AF_MCTP socket)
     participant Remote as 遠端裝置
 
     Caller->>Handler: registerRequest(eid, msg, callback)

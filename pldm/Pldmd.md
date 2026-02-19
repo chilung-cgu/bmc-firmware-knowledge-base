@@ -70,12 +70,18 @@ flowchart TD
 
 ### 1. Transport 層（`common/transport.hpp`）
 
-`PldmTransport` 類別封裝了 libpldm 的傳輸層，支援兩種實作：
+`PldmTransport` 類別封裝了 libpldm 的傳輸層，支援兩種實作（由編譯時指定）：
 
-| 傳輸方式     | 說明                                 | 編譯選項                              |
-| ------------ | ------------------------------------ | ------------------------------------- |
-| `af-mctp`    | 直接使用 Linux Kernel AF_MCTP socket | `transport-implementation=af-mctp`    |
-| `mctp-demux` | 透過 mctp-demux daemon 中轉          | `transport-implementation=mctp-demux` |
+| 傳輸方式     | 說明                                 | 編譯選項                              | 狀態                      |
+| ------------ | ------------------------------------ | ------------------------------------- | ------------------------- |
+| `af-mctp`    | 直接使用 Linux Kernel AF_MCTP socket | `transport-implementation=af-mctp`    | ✅ **現代主流**           |
+| `mctp-demux` | 透過已淘汰的 mctp-demux daemon 中轉  | `transport-implementation=mctp-demux` | ⚠️ **已淘汰，不建議使用** |
+
+> ⚠️ **架構說明（重要）**：
+>
+> **`af-mctp`（現代架構）**：pldmd 直接呼叫 `socket(AF_MCTP, SOCK_DGRAM, 0)` 建立 kernel socket，透過 `sendto()`/`recvfrom()` **直接與 Linux Kernel MCTP Stack 通訊**。`mctpd` 在此架構中僅負責 **Control Plane**（建立 kernel route/neigh 表、分配 EID），完全不參與 PLDM 訊息的傳遞。
+>
+> **`mctp-demux`（舊式架構，已淘汰）**：pldmd 透過 Unix Domain Socket 連線 `mctp-demux-daemon`，由該 daemon 代替開啟 AF_MCTP socket 並將訊息廣播給所有訂閱的 client。這個 daemon **才是實際參與訊息傳遞的中間人**，不是 `mctpd`。現代 OpenBMC 已淘汰此架構。
 
 > ⚠️ **簡化說明**：以下為 `PldmTransport` 類別的主要公開 API 概覽，省略了部分 private 成員和條件編譯細節。完整定義請見 `common/transport.hpp`。
 
@@ -95,7 +101,7 @@ private:
 };
 ```
 
-> **面試重點**：`af-mctp` 是較新的方式，直接使用 kernel socket；`mctp-demux` 是舊方式，需要額外的 demux daemon。現代 OpenBMC 傾向使用 `af-mctp`。
+> **面試重點**：`af-mctp` 是現代主流方式，直接使用 kernel socket；`mctp-demux` 是已淡化的舊方式，需要額外的 demux daemon。無論哪種方式，**`mctpd` 都不參與 PLDM 訊息的傳遞**：`mctpd` 屬於 MCTP Control Plane（管 EID 分配、端點發現），不操作 PLDM 訊息。
 
 ### 2. 訊息分發器：Invoker 與 CmdHandler
 

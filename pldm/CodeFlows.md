@@ -16,15 +16,16 @@
 ```mermaid
 sequenceDiagram
     participant Remote as 遠端 PLDM Terminus
-    participant MCTP as MCTP 傳輸層
+    participant KernelMCTP as Kernel MCTP Stack<br/>(AF_MCTP socket)
     participant pldmd as pldmd 守護程式
     participant Handler as libpldmresponder
     participant libpldm as libpldm
     participant DBus as D-Bus
 
     Note over Remote,DBus: 步驟 a: 接收請求
-    Remote->>MCTP: PLDM Request Message
-    MCTP->>pldmd: Forward to pldmd
+    Remote->>KernelMCTP: PLDM Request Message
+    Note over KernelMCTP: Kernel 查路由表，遞送至監聴對應 EID 的 socket<br/>(路由表由 mctpd 在初始化時建立，不是由 mctpd 轉發)
+    KernelMCTP->>pldmd: recvfrom(AF_MCTP socket)
 
     Note over Remote,DBus: 步驟 b: 路由到 Handler
     pldmd->>pldmd: 解析 PLDM Type/Command
@@ -45,20 +46,20 @@ sequenceDiagram
 
     Note over Remote,DBus: 步驟 f: 發送回應
     Handler-->>pldmd: Response Message
-    pldmd->>MCTP: Send Response
-    MCTP->>Remote: PLDM Response Message
+    pldmd->>KernelMCTP: sendto(AF_MCTP socket)
+    KernelMCTP->>Remote: PLDM Response Message
 ```
 
 > **逐步說明：**
 >
-> 這張圖展示 BMC 作為 Responder（回應者）處理一筆 PLDM 請求的完整過程：
+> 這張圖展示 BMC 作為 Responder（回應者）處理一筆 PLDM 請求的完整過程（現代 AF_MCTP 架構）：
 >
-> - **步驟 a：接收請求**——遠端裝置透過 MCTP 發送一筆 PLDM 請求給 BMC，mctpd 轉發給 pldmd。
+> - **步驟 a：接收請求**——遠端裝置透過實體 MCTP 傳輸發送一筆 PLDM 請求給 BMC。**Kernel MCTP Stack** 根據路由表（由 `mctpd` 在初始化時建立）將封包遞送到 pldmd 的 `AF_MCTP` socket。
 > - **步驟 b：路由到 Handler**——pldmd 解析 PLDM Type 和 Command，分發給對應的 Handler（像客服中心轉接到對的部門）。
 > - **步驟 c：解碼請求**——Handler 用 libpldm 的 `decode_foo_req()` 將原始位元組解碼成有意義的欄位。
 > - **步驟 d：處理請求**——Handler 執行業務邏輯，可能透過 D-Bus 讀取 Sensor 值、設定屬性等。
 > - **步驟 e：編碼回應**——用 libpldm 的 `encode_foo_resp()` 將結果編碼成 PLDM 回應訊息。
-> - **步驟 f：發送回應**——透過 MCTP 將回應傳回給遠端裝置。
+> - **步驟 f：發送回應**——pldmd 透過 `sendto()` 直接寫入 AF_MCTP socket，Kernel 負責透過實體傳輸送回遠端。
 >
 > **白話總結**：接電話 → 轉接部門 → 聽懂問題 → 查資料 → 組裝答案 → 回覆客戶。
 
@@ -160,27 +161,27 @@ void sendResponse(mctp_eid_t eid, Response& resp) {
 
 ```mermaid
 sequenceDiagram
-    participant App as BMC 應用程式
-    participant Req as requester 模組
+    participant App as BMC 應用程式<br/>(platform-mc 等)
+    participant Req as requester 模組<br/>(requester::Handler)
     participant libpldm as libpldm
-    participant pldmd as pldmd
-    participant MCTP as MCTP 傳輸層
+    participant KernelMCTP as Kernel MCTP Stack<br/>(AF_MCTP socket)
     participant Remote as 遠端 PLDM 裝置
 
     Note over App,Remote: 步驟 a: 準備請求
-    App->>Req: prepareRequest(eid, type, cmd, payload)
+    App->>Req: registerRequest(eid, type, cmd, payload, callback)
+    Req->>Req: allocateInstanceId(eid)
     Req->>libpldm: encode_foo_req()
     libpldm-->>Req: 編碼後的請求
 
     Note over App,Remote: 步驟 b: 發送請求
-    Req->>pldmd: sendRequest(request)
-    pldmd->>MCTP: send(eid, message)
-    MCTP->>Remote: PLDM Request
+    Req->>KernelMCTP: sendto(AF_MCTP socket, EID=x)
+    Note over KernelMCTP: Kernel 負責查路由表、進行實體傳輸<br/>不需要任何中間 daemon
+    KernelMCTP->>Remote: PLDM Request
 
     Note over App,Remote: 步驟 c: 接收回應
-    Remote->>MCTP: PLDM Response
-    MCTP->>pldmd: receive(response)
-    pldmd->>Req: notifyResponse(instanceId, response)
+    Remote->>KernelMCTP: PLDM Response
+    KernelMCTP->>Req: recvfrom(AF_MCTP socket)
+    Req->>Req: matchResponse(instanceId)
 
     Note over App,Remote: 步驟 d: 處理回應
     Req->>libpldm: decode_foo_resp()
@@ -190,12 +191,12 @@ sequenceDiagram
 
 > **逐步說明：**
 >
-> 這張圖展示 BMC 作為 Requester（請求者）主動發起請求的流程：
+> 這張圖展示 BMC 作為 Requester（請求者）主動發起請求的流程（現代 AF_MCTP 架構）：
 >
-> - **步驟 a：準備請求**——BMC 應用程式呼叫 requester 模組，用 libpldm 的 `encode_foo_req()` 編碼請求。
-> - **步驟 b：發送請求**——requester 將請求透過 pldmd 轉發到 MCTP，再發到遠端裝置。
-> - **步驟 c：接收回應**——遠端裝置處理完畢後回傳 Response。pldmd 透過 Instance ID 匹配到對應的請求，通知 requester 模組。
-> - **步驟 d：處理回應**——requester 用 libpldm 的 `decode_foo_resp()` 解碼回應，然後透過 callback 通知原始呼叫者。
+> - **步驟 a：準備請求**——BMC 應用程式（如 platform-mc）呼叫 `requester::Handler::registerRequest()`，分配 Instance ID 後用 libpldm 的 `encode_foo_req()` 編碼請求。
+> - **步驟 b：發送請求**——requester 透過 `sendto()` **直接寫入 AF_MCTP socket**，由 **Kernel MCTP Stack** 負責查路由表、進行實體傳輸——**不需要任何中間 daemon**。
+> - **步驟 c：接收回應**——遠端裝置回傳 Response，Kernel 透過 `recvfrom()` 遞送回 requester 的 socket，根據 Instance ID 配對到對應的請求。
+> - **步驟 d：處理回應**——requester 用 libpldm 的 `decode_foo_resp()` 解碼回應，透過 callback 通知原始呼叫者。
 >
 > **與 Responder 的差異**：Responder 是「接電話」（被動回答），Requester 是「打電話」（主動發問）。注意編解碼的方向相反：Requester 先編碼 request 再解碼 response，Responder 先解碼 request 再編碼 response。
 

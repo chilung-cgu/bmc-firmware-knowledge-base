@@ -188,15 +188,15 @@ Response getPLDMTypes(pldm_tid_t tid, const pldm_msg* request, size_t len) {
 sequenceDiagram
     participant App as BMC 應用
     participant Req as Requester
-    participant MCTP as MCTP Transport
+    participant MCTP as PldmTransport<br/>(AF_MCTP socket)
     participant Term as PLDM Terminus
 
     App->>Req: sendRequest(eid, request)
     Req->>Req: allocateInstanceId()
-    Req->>MCTP: send(eid, pldmMsg)
+    Req->>MCTP: sendto(AF_MCTP socket, EID=x)
     MCTP->>Term: MCTP Packet
     Term->>MCTP: Response
-    MCTP->>Req: receive(response)
+    MCTP->>Req: recvfrom(AF_MCTP socket)
     Req->>App: callback(response)
 ```
 
@@ -229,19 +229,28 @@ Platform Monitoring and Control 的 MC (Management Controller) 端實作：
 
 ## 資料流
 
+> **⚠️ 架構說明（重要）**
+>
+> 現代 OpenBMC（使用 `PLDM_TRANSPORT_WITH_AF_MCTP` 編譯選項，目前主流）中，`pldmd` **直接透過 Linux Kernel 的 `AF_MCTP` socket** 收發 PLDM 訊息，不需要任何中間 Daemon 轉發。
+>
+> `mctpd`（MCTP Bus-Owner Daemon）**不參與 PLDM 的 request/response 資料流**。它只負責 **Control Plane**：在 setup 階段分配 EID、建立 kernel route/neigh 表、發布 D-Bus 物件。資料流建立後，`mctpd` 就退到背景，不再涉入。
+>
+> ⚠️ 舊版 OpenBMC 曾使用 `mctp-demux-daemon`（`PLDM_TRANSPORT_WITH_MCTP_DEMUX`），該 daemon 才是真正的訊息中繼。現代架構已移除此 daemon，改為 kernel 直連。
+
 ### BMC 作為 Responder
 
 ```mermaid
 sequenceDiagram
     participant Host as Host PLDM
-    participant MCTP as MCTP Daemon
+    participant KernelMCTP as Kernel MCTP Stack<br/>(AF_MCTP socket)
     participant pldmd as pldmd
     participant Handler as libpldmresponder
     participant libpldm as libpldm
     participant DBus as D-Bus
 
-    Host->>MCTP: PLDM Request (over MCTP)
-    MCTP->>pldmd: Forward Request
+    Host->>KernelMCTP: PLDM Request (over physical MCTP)
+    Note over KernelMCTP: Kernel 路由查表（由 mctpd 在 setup 時建立）
+    KernelMCTP->>pldmd: recvfrom(AF_MCTP socket)
     pldmd->>pldmd: Route by PLDM Type
     pldmd->>Handler: dispatch(request)
     Handler->>libpldm: decode_xxx_req()
@@ -249,57 +258,57 @@ sequenceDiagram
     DBus-->>Handler: Property Values
     Handler->>libpldm: encode_xxx_resp()
     Handler-->>pldmd: Response
-    pldmd->>MCTP: Send Response
-    MCTP->>Host: PLDM Response
+    pldmd->>KernelMCTP: sendto(AF_MCTP socket)
+    KernelMCTP->>Host: PLDM Response (over physical MCTP)
 ```
 
 > **逐步說明：**
 >
-> 這張圖展示 BMC 作為 Responder（回應者）時的流程：
+> 這張圖展示 BMC 作為 Responder（回應者）時的現代架構流程：
 >
-> 1. **Host 發送 PLDM 請求**：Host 透過 MCTP 發送請求給 BMC。
-> 2. **pldmd 收到並分發**：pldmd 根據 PLDM Type 將請求轉發給對應的 Handler。
-> 3. **Handler 解碼請求**：用 libpldm 的 `decode_xxx_req()` 解碼請求內容。
-> 4. **讀寫 D-Bus**：Handler 透過 D-Bus 讀取或寫入系統屬性（如讀取溫度、設定開機模式）。
-> 5. **編碼回應**：用 libpldm 的 `encode_xxx_resp()` 編碼回應。
-> 6. **發送回應給 Host**：透過 MCTP 發回。
+> 1. **Host 發送 PLDM 請求**：Host 透過實體 MCTP 傳輸（如 I2C/PCIe）發送請求給 BMC。
+> 2. **Kernel 路由**：Linux Kernel MCTP Stack 收到封包後，根據 `mctpd` 在 setup 時建立的 kernel route/neigh 表，將封包遞送給監聽對應 EID 的 socket（pldmd 的 AF_MCTP socket）。
+> 3. **pldmd 直接收訊**：pldmd 透過 `recvfrom()` 從自己的 AF_MCTP socket 收到訊息，根據 PLDM Type 分發給對應 Handler。
+> 4. **Handler 解碼請求**：用 libpldm 的 `decode_xxx_req()` 解碼請求內容。
+> 5. **讀寫 D-Bus**：Handler 透過 D-Bus 讀取或寫入系統屬性（如讀取溫度、設定開機模式）。
+> 6. **編碼並發送回應**：用 libpldm 的 `encode_xxx_resp()` 編碼後，透過 `sendto()` 直接回傳給 Kernel，Kernel 再轉發給 Host。
 >
-> **白話總結**：像客服中心——接到客戶的問題（請求）→ 查資料（D-Bus）→ 組裝答案（編碼）→ 回覆客戶（回應）。
+> **白話總結**：pldmd 像直撥電話——直接接通 kernel（不需要轉接手）→ 查資料（D-Bus）→ 組裝答案（編碼）→ 直接回覆（kernel 轉發）。
 
 ### BMC 作為 Requester
 
 ```mermaid
 sequenceDiagram
-    participant App as BMC 應用程式
-    participant Req as requester
-    participant pldmd as pldmd
+    participant App as BMC 應用程式<br/>(platform-mc 等)
+    participant Req as requester::Handler
     participant libpldm as libpldm
-    participant MCTP as MCTP Daemon
-    participant Device as PLDM Device
+    participant KernelMCTP as Kernel MCTP Stack<br/>(AF_MCTP socket)
+    participant Device as PLDM Device / Terminus
 
-    App->>Req: Send PLDM Request
+    App->>Req: sendRequest(eid, pldmMsg)
+    Req->>Req: allocateInstanceId()
     Req->>libpldm: encode_xxx_req()
-    Req->>pldmd: Queue Request
-    pldmd->>MCTP: Send via MCTP
-    MCTP->>Device: PLDM Request
-    Device->>MCTP: PLDM Response
-    MCTP->>pldmd: Receive Response
-    pldmd->>Req: Dispatch to Handler
+    Req->>KernelMCTP: sendto(AF_MCTP socket, EID=x)
+    Note over KernelMCTP: Kernel 查路由表，決定實體傳輸路徑
+    KernelMCTP->>Device: PLDM Request (over physical MCTP)
+    Device->>KernelMCTP: PLDM Response
+    KernelMCTP->>Req: recvfrom(AF_MCTP socket)
     Req->>libpldm: decode_xxx_resp()
-    Req->>App: Callback with Result
+    Req->>App: callback(response)
 ```
 
 > **逐步說明：**
 >
-> 這張圖展示 BMC 作為 Requester（請求者）時的流程：
+> 這張圖展示 BMC 作為 Requester（請求者）時的現代架構流程：
 >
-> 1. **BMC 應用發送請求**：BMC 的某個模組想查詢遠端裝置的資訊。
-> 2. **編碼請求**：用 libpldm 的 `encode_xxx_req()` 將請求編碼成 PLDM 格式。
-> 3. **佇列並發送**：請求被加入佇列，然後透過 MCTP 發送到遠端裝置。
-> 4. **等待回應**：遠端裝置處理後回傳 PLDM Response。
-> 5. **解碼並回調**：Requester 收到 Response，用 libpldm 解碼後，透過 callback 通知原始呼叫者。
+> 1. **BMC 應用發起請求**：BMC 的某個模組（如 platform-mc）想向遠端 PLDM Terminus 查詢資訊，呼叫 `requester::Handler::sendRequest()`。
+> 2. **分配 Instance ID**：Requester 分配唯一的 Instance ID，用於之後配對請求和回應。
+> 3. **編碼請求**：用 libpldm 的 `encode_xxx_req()` 將請求編碼成 PLDM 格式。
+> 4. **直接發送到 Kernel**：透過 `sendto()` 呼叫 AF_MCTP socket，由 **Kernel MCTP Stack** 負責查路由表、進行實體傳輸——**不需要任何中間 daemon**。
+> 5. **等待回應**：遠端 Terminus 處理後回傳 PLDM Response，Kernel 將其遞送回 Requester 的 socket。
+> 6. **解碼並回調**：Requester 收到 Response，用 libpldm 解碼後，透過 callback 通知原始呼叫者。
 >
-> **與 Responder 的差異**：Responder 是「等別人問」，Requester 是「主動問別人」。方向相反，但都經過 libpldm 做編解碼。
+> **與 Responder 的差異**：Responder 是「等別人問」，Requester 是「主動問別人」。兩者都直接操作 AF_MCTP socket，都經過 libpldm 做編解碼，都不需要中間 daemon 轉發。
 
 ---
 
