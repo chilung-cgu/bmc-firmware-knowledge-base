@@ -444,6 +444,7 @@ meson setup obj -Dunsafe-recover-nil-uuid=true
 - [DBusOverview](DBusOverview.md) - D-Bus 介面總覽
 - [EndpointDiscovery](EndpointDiscovery.md) - 端點發現
 - [SystemdIntegration](SystemdIntegration.md) - Systemd 整合
+- [SourceCodeWalkthrough](SourceCodeWalkthrough.md) - mctpd 完整呼叫鏈走讀
 
 ---
 

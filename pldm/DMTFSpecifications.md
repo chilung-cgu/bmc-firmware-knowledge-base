@@ -229,7 +229,7 @@ stateDiagram-v2
 
 > **逐步說明（狀態機）**：
 >
-> IDLE → LEARN_COMPONENTS（查詢裝置）→ READY_XFER（取得韌體參數）→ DOWNLOAD（請求更新）→ VERIFY（傳遞元件表）→ APPLY（更新元件）→ ACTIVATE（搯用韌體）。這是 DSP0267 定義的標準狀態機。
+> IDLE → LEARN_COMPONENTS（查詢裝置）→ READY_XFER（取得韌體參數）→ DOWNLOAD（請求更新）→ VERIFY（傳遞元件表）→ APPLY（更新元件）→ ACTIVATE（啟用韌體）。這是 DSP0267 定義的標準狀態機。
 
 ### FW Update 命令
 

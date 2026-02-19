@@ -425,6 +425,7 @@ mctp/
 - [MCTPOverview](MCTPOverview.md) - MCTP 協議概述
 - [KernelStack](KernelStack.md) - Linux 核心 MCTP 堆疊
 - [DBusOverview](DBusOverview.md) - D-Bus 介面總覽
+- [SourceCodeWalkthrough](SourceCodeWalkthrough.md) - mctpd 完整呼叫鏈走讀
 
 ---
 

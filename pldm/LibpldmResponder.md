@@ -219,7 +219,7 @@ sequenceDiagram
 
 ### 支援的命令
 
-> **注意**：實隞 bios handler 只註冊以下 6 個命令，並非按表格類型拆分。
+> **注意**：實際 bios handler 只註冊以下 6 個命令，並非按表格類型拆分。
 
 | 命令                                   | 說明                                                      |
 | -------------------------------------- | --------------------------------------------------------- |
@@ -344,7 +344,7 @@ graph LR
 
 ## OEM 擴充介面
 
-`oem_handler.hpp` 定義了 4 個 OEM 抽象介面，供各廠商實作（upstream 有 IBM 和 Ampere）：
+`oem_handler.hpp` 定義了 4 個 OEM 抽象介面，供各廠商實作（upstream 有 IBM、Ampere、Meta、NVIDIA）：
 
 ### oem_platform::Handler
 

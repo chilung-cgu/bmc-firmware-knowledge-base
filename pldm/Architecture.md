@@ -353,8 +353,10 @@ pldm/
 ├── host-bmc/                 # Host-BMC 通訊
 ├── softoff/                  # 軟關機功能
 ├── oem/                      # OEM 擴充
+│   ├── ampere/               # Ampere OEM 實作
 │   ├── ibm/                  # IBM OEM 實作
-│   └── ampere/               # Ampere OEM 實作
+│   ├── meta/                 # Meta OEM 實作
+│   └── nvidia/               # NVIDIA OEM 實作
 ├── configurations/           # 配置檔案
 ├── docs/                     # 官方文件
 └── pldmtool/                 # 命令列工具
@@ -367,6 +369,7 @@ pldm/
 - [PLDMOverview](PLDMOverview.md) - PLDM 協議詳細說明
 - [CodeOrganization](CodeOrganization.md) - 程式碼組織深入說明
 - [CodeFlows](CodeFlows.md) - 詳細程式碼流程
+- [SourceCodeWalkthrough](SourceCodeWalkthrough.md) - pldmd 完整呼叫鏈走讀
 
 ---
 

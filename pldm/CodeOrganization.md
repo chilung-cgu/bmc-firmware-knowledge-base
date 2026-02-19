@@ -16,8 +16,10 @@ pldm/
 ├── host-bmc/                 # Host-BMC 通訊
 ├── softoff/                  # 軟關機
 ├── oem/                      # OEM 擴充
+│   ├── ampere/               # Ampere OEM
 │   ├── ibm/                  # IBM OEM
-│   └── ampere/               # Ampere OEM
+│   ├── meta/                 # Meta OEM
+│   └── nvidia/               # NVIDIA OEM
 ├── common/                   # 共用工具
 ├── configurations/           # 配置檔案
 ├── pldmtool/                 # CLI 工具
@@ -47,8 +49,7 @@ pldmd/
 ├── invoker.hpp        # Invoker 訊息分發器
 ├── dbus_impl_pdr.cpp/hpp  # PDR D-Bus 介面實作
 ├── oem_ibm.hpp        # IBM OEM 工廠類別
-├── service_files/     # Systemd 服務檔案
-└── meson.build        # 模組建置
+└── service_files/     # Systemd 服務檔案
 ```
 
 ---
@@ -267,8 +268,10 @@ fw-update/
 ├── package_parser.cpp/hpp        # 更新封包解析
 ├── activation.cpp/hpp            # 啟動管理
 ├── watch.cpp/hpp                 # 檔案監控 (inotify)
+├── update.cpp/hpp                # 更新操作
 ├── firmware_inventory.cpp/hpp    # 韌體清單
-├── firmware_inventory_manager.cpp/hpp
+├── firmware_inventory_manager.cpp/hpp  # 韌體清單管理器
+├── aggregate_update_manager.cpp/hpp   # 聚合更新管理器
 ├── manager.hpp                   # 模組管理器
 └── test/                         # 單元測試
 ```
@@ -311,17 +314,20 @@ OEM 廠商擴充目錄：
 
 ```
 oem/
+├── ampere/                   # Ampere OEM
+│   └── oem_ampere.hpp        # Ampere 初始化
 ├── ibm/                      # IBM OEM
 │   ├── libpldmresponder/     # OEM Handler
 │   │   └── oem_*.cpp/hpp
 │   ├── configurations/       # OEM 配置
 │   │   └── bios/             # BIOS 屬性 JSON
 │   └── pldmtool/             # OEM pldmtool 命令
-└── ampere/                   # Ampere OEM
-    └── oem_ampere.hpp        # Ampere 初始化
+├── meta/                     # Meta OEM
+│   ├── oem_meta.cpp/hpp      # Meta OEM Handler
+│   └── utils.cpp/hpp         # Meta 工具函式
+└── nvidia/                   # NVIDIA OEM
+    └── oem_nvidia.hpp        # NVIDIA 初始化
 ```
-
-> ⚠️ **注意**：upstream `oem/` 僅有 `ibm/` 和 `ampere/`。其他 OEM（如 Meta）存在於下游分支。
 
 #### 新增 OEM 支援
 
@@ -337,17 +343,19 @@ oem/
 命令列診斷工具：
 
 ```
+
 pldmtool/
-├── pldmtool.cpp              # 主程式
-├── pldm_cmd_helper.cpp/hpp   # 命令輔助函式
-├── pldm_base_cmd.cpp/hpp     # Base 命令
-├── pldm_bios_cmd.cpp/hpp     # BIOS 命令
-├── pldm_fru_cmd.cpp/hpp      # FRU 命令
+├── pldmtool.cpp # 主程式
+├── pldm_cmd_helper.cpp/hpp # 命令輔助函式
+├── pldm_base_cmd.cpp/hpp # Base 命令
+├── pldm_bios_cmd.cpp/hpp # BIOS 命令
+├── pldm_fru_cmd.cpp/hpp # FRU 命令
 ├── pldm_platform_cmd.cpp/hpp # Platform 命令
 ├── pldm_fw_update_cmd.cpp/hpp # FW Update 命令
-├── oem/                      # OEM 命令
-├── README.md                 # 使用說明
-└── meson.build               # 建置定義
+├── oem/ # OEM 命令
+├── README.md # 使用說明
+└── meson.build # 建置定義
+
 ```
 
 ---
@@ -368,6 +376,7 @@ pldmtool/
 
 - [CodeFlows](CodeFlows.md) - 程式碼執行流程
 - [Architecture](Architecture.md) - 系統架構
+- [SourceCodeWalkthrough](SourceCodeWalkthrough.md) - pldmd 完整呼叫鏈走讀
 
 ---
 

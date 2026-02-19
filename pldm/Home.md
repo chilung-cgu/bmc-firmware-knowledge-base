@@ -32,12 +32,13 @@
 1. [Architecture](Architecture.md) - 系統設計
 2. [CodeOrganization](CodeOrganization.md) - 程式碼結構
 3. [CodeFlows](CodeFlows.md) - Requester/Responder 流程
-4. 選擇對應的 Type 文件：
+4. [SourceCodeWalkthrough](SourceCodeWalkthrough.md) - pldmd 完整呼叫鏈走讀
+5. 選擇對應的 Type 文件：
    - 平台監控：[TypePlatform](TypePlatform.md) → [PDRImplementation](PDRImplementation.md)
    - BIOS：[TypeBIOS](TypeBIOS.md) → [BIOSConfig](BIOSConfig.md)
    - 韌體更新：[TypeFirmwareUpdate](TypeFirmwareUpdate.md) → [FirmwareUpdate](FirmwareUpdate.md)
-5. [Pldmd](Pldmd.md) - 守護程式詳解
-6. [Pldmtool](Pldmtool.md) - 除錯工具
+6. [Pldmd](Pldmd.md) - 守護程式詳解
+7. [Pldmtool](Pldmtool.md) - 除錯工具
 
 ### 🔌 整合開發者
 
@@ -56,13 +57,14 @@
 
 ### 核心概念
 
-| 文件                                        | 說明                         |
-| ------------------------------------------- | ---------------------------- |
-| [Architecture](Architecture.md)             | 系統架構與設計理念           |
-| [PLDMOverview](PLDMOverview.md)             | PLDM 協議概述與訊息格式      |
-| [DMTFSpecifications](DMTFSpecifications.md) | DMTF 規範詳細說明            |
-| [CodeOrganization](CodeOrganization.md)     | 程式碼組織結構               |
-| [CodeFlows](CodeFlows.md)                   | BMC Responder/Requester 流程 |
+| 文件                                              | 說明                         |
+| ------------------------------------------------- | ---------------------------- |
+| [Architecture](Architecture.md)                   | 系統架構與設計理念           |
+| [PLDMOverview](PLDMOverview.md)                   | PLDM 協議概述與訊息格式      |
+| [DMTFSpecifications](DMTFSpecifications.md)       | DMTF 規範詳細說明            |
+| [CodeOrganization](CodeOrganization.md)           | 程式碼組織結構               |
+| [CodeFlows](CodeFlows.md)                         | BMC Responder/Requester 流程 |
+| [SourceCodeWalkthrough](SourceCodeWalkthrough.md) | pldmd main() 完整呼叫鏈走讀  |
 
 ---
 

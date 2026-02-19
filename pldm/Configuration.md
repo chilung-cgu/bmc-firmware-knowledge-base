@@ -78,10 +78,9 @@
 | --------------------- | ------- | ------- | --------------------------------- |
 | `oem-ibm`             | feature | enabled | IBM OEM 支援                      |
 | `oem-ampere`          | feature | enabled | Ampere OEM 支援                   |
+| `oem-meta`            | feature | enabled | Meta OEM 支援                     |
+| `oem-nvidia`          | feature | enabled | NVIDIA OEM 支援                   |
 | `oem-ibm-dma-maxsize` | int     | 8384512 | IBM DMA 最大傳輸（4096-16773120） |
-
-> [!IMPORTANT]
-> Upstream `meson.options` 中僅有 `oem-ibm` 和 `oem-ampere`。網路上某些文件可能引用 `oem-nvidia` 或 `oem-meta`，但這些不存在於 upstream。
 
 ---
 

@@ -96,7 +96,7 @@ flowchart TD
     end
     A --> LIBPLDMRESPONDER
 
-    A --> M["registerHandler() L332-335"]
+    A --> M["registerHandler() L354-357"]
     M --> C
 
     A --> N["fwManager L343"]
@@ -537,6 +537,8 @@ MctpDiscovery 接收 handler list（std::initializer_list<MctpDiscoveryHandlerIn
 ```
 #ifdef OEM_IBM   → OemIBM 擴充（ibm-specific handler）
 #ifdef OEM_AMPERE → OemAMPERE 擴充（ampere-specific handler）
+#ifdef OEM_META  → OemMETA 擴充（meta-specific handler）
+#ifdef OEM_NVIDIA → OemNVIDIA 擴充（nvidia-specific handler）
 #ifdef LIBPLDMRESPONDER → 啟用 BMC 側回應（Host-facing handler）
 
 OEM 擴充透過在建構函式中向 Invoker 註冊額外 Handler 來實現。

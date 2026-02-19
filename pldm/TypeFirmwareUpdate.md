@@ -90,8 +90,8 @@ stateDiagram-v2
 >
 > 1. **IDLE**：初始狀態，等待更新。
 > 2. **LEARN_COMPONENTS**：收到 `RequestUpdate` 後，裝置開始「學習」即將更新的元件資訊。
-> 3. **READY_XFER**：元件賈確認完畢，準備接收韌體資料。
-> 4. **DOWNLOAD**：裝置透過 `RequestFirmwareData` 反複請求 Update Agent 傳送韌體資料。這裡的特殊之處是：**是裝置主動拉資料，不是 BMC 主動推送**。
+> 3. **READY_XFER**：元件確認完畢，準備接收韌體資料。
+> 4. **DOWNLOAD**：裝置透過 `RequestFirmwareData` 反覆請求 Update Agent 傳送韌體資料。這裡的特殊之處是：**是裝置主動拉資料，不是 BMC 主動推送**。
 > 5. **VERIFY**：傳輸完成後，裝置驗證韌體的完整性（如 CRC 檢查）。
 > 6. **APPLY**：驗證通過後，裝置將韌體寫入 Flash。如果還有更多元件，回到 READY_XFER；否則進入 ACTIVATE。
 > 7. **ACTIVATE**：啟用新韌體，可能需要重啟裝置。

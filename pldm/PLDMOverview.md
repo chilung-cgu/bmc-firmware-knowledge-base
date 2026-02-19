@@ -51,7 +51,7 @@ graph TB
 >
 > - **應用層**：Redfish API、IPMI、Web UI（使用者接觸的介面）。
 > - **管理層**：BMC 運行 OpenBMC 作業系統。
-> - **協議層**：PLDM 负責「說什麼」，MCTP 負責「怎麼傳」。
+> - **協議層**：PLDM 負責「說什麼」，MCTP 負責「怎麼傳」。
 > - **平台層**：被管理的硬體裝置（Host CPU、GPU、NIC、Storage）。
 >
 > **白話總結**：PLDM 是 BMC 與硬體之間的「共同語言」，透過 MCTP 「交通網」進行通訊。
@@ -204,7 +204,7 @@ MCTP Packet:
 | 術語         | 說明                                                         |
 | ------------ | ------------------------------------------------------------ |
 | **Terminus** | PLDM 通訊端點，具有唯一 TID。代表一個**裝置**而非單一 Sensor |
-| **TID**      | Terminus ID，8-bit 識別符（0x00 保留、0xFF 為未分配）        |
+| **TID**      | Terminus ID，8-bit 識別符（0x00 為未分配、0xFF 保留）        |
 | **EID**      | MCTP Endpoint ID，傳輸層位址                                 |
 
 ### Terminus 是什麼？實體例子
@@ -324,18 +324,19 @@ Instance ID 用於匹配請求與回應：
 | 生命週期 | 收到回應或超時後釋放                   |
 | 重試     | 重試時使用相同 Instance ID             |
 
+> ⚠️ **概念性說明**：以下為簡化的概念範例。實際的 `InstanceIdDb` class 位於 `common/instance_id.hpp`，底層使用 libpldm 的 `pldm_instance_id_alloc()` / `pldm_instance_id_free()` 管理 Instance ID。
+
 ```cpp
-// Instance ID 分配範例
+// 概念性簡化 — 實際實作見 common/instance_id.hpp
 class InstanceIdDb {
 public:
-    uint8_t next(mctp_eid_t eid) {
-        uint8_t id = nextId[eid];
-        nextId[eid] = (nextId[eid] + 1) % 32;
-        return id;
+    std::expected<uint8_t, InstanceIdError> next(uint8_t tid) {
+        // 透過 pldm_instance_id_alloc() 分配
+        return id; // 0-31 範圍內的可用 ID
     }
 
-    void free(mctp_eid_t eid, uint8_t instanceId) {
-        // 標記為可重用
+    void free(uint8_t tid, uint8_t instanceId) {
+        // 透過 pldm_instance_id_free() 釋放
     }
 };
 ```

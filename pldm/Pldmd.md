@@ -162,7 +162,7 @@ protected:
 
 > **設計模式**：這是一個 **Command Pattern** + **Strategy Pattern** 的組合。每個 PLDM Type 實作自己的 `CmdHandler` 衍生類別，在建構時將支援的命令碼對應到 handler 函式。
 
-**Handler 註冊順序**（`pldmd.cpp` L332-335）：
+**Handler 註冊順序**（`pldmd.cpp` L354-357）：
 
 ```cpp
 invoker.registerHandler(PLDM_BIOS, std::move(biosHandler));      // Type 3
@@ -230,7 +230,7 @@ sequenceDiagram
 
 ### 4. Instance ID 管理（`common/instance_id.hpp`）
 
-Instance ID 是 PLDM 協議中用於匹配 Request-Response 的 8-bit 識別碼（依 DSP0240 v1.1.0）。
+Instance ID 是 PLDM 協議中用於匹配 Request-Response 的 5-bit 識別碼（範圍 0-31，依 DSP0240 v1.1.0），在 C++ API 中以 `uint8_t` 儲存。
 
 > ⚠️ **簡化說明**：以下為 `InstanceIdDb` 類別的主要公開 API 概覽，省略了部分實作細節。完整定義請見 `common/instance_id.hpp`。
 
@@ -298,12 +298,12 @@ pldmd 透過編譯時條件式（`#ifdef`）支援多家 OEM 擴充。以下為 
 
 | OEM    | 編譯旗標     | Meson 選項   | 來源目錄      | 說明                                                                         |
 | ------ | ------------ | ------------ | ------------- | ---------------------------------------------------------------------------- |
-| IBM    | `OEM_IBM`    | `oem-ibm`    | `oem/ibm/`    | 完整 OEM 處理（Host/File I/O 等），在 `pldmd.cpp` 中以 `#ifdef OEM_IBM` 守護 |
 | Ampere | `OEM_AMPERE` | `oem-ampere` | `oem/ampere/` | Ampere 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_AMPERE` 守護                |
+| IBM    | `OEM_IBM`    | `oem-ibm`    | `oem/ibm/`    | 完整 OEM 處理（Host/File I/O 等），在 `pldmd.cpp` 中以 `#ifdef OEM_IBM` 守護 |
+| Meta   | `OEM_META`   | `oem-meta`   | `oem/meta/`   | Meta 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_META` 守護                    |
+| NVIDIA | `OEM_NVIDIA` | `oem-nvidia` | `oem/nvidia/` | NVIDIA 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_NVIDIA` 守護                |
 
-> ⚠️ **注意**：upstream `oem/` 目錄下只有 `ibm/` 和 `ampere/` 兩個子目錄。其他 OEM（如 Meta、NVIDIA）可能存在於各公司的下游分支中，但不在 upstream OpenBMC pldm repo。
-
-### OEM 初始化模式（`pldmd.cpp` L316-330）
+### OEM 初始化模式（`pldmd.cpp` L328-352）
 
 ```cpp
 #ifdef OEM_AMPERE
@@ -312,6 +312,16 @@ pldmd 透過編譯時條件式（`#ifdef`）支援多家 OEM 擴充。以下為 
         instanceIdDb, event, invoker, hostPDRHandler.get(),
         platformHandler.get(), fruHandler.get(), baseHandler.get(),
         biosHandler.get(), platformManager.get(), &reqHandler);
+#endif
+
+#ifdef OEM_META
+    pldm::oem_meta::OemMETA oemMETA(&dbusHandler, invoker,
+                                    platformHandler.get());
+#endif
+
+#ifdef OEM_NVIDIA
+    pldm::oem_nvidia::OemNVIDIA oemNVIDIA(platformHandler.get(),
+                                          platformManager.get());
 #endif
 
 #ifdef OEM_IBM
@@ -331,12 +341,13 @@ pldmd 透過編譯時條件式（`#ifdef`）支援多家 OEM 擴充。以下為 
 
 pldmd 在 D-Bus 上暴露以下介面：
 
-### Object Manager（3 個路徑）
+### Object Manager（4 個路徑）
 
 ```cpp
-// pldmd.cpp L200-207
+// pldmd.cpp L208-217
 sdbusplus::server::manager_t objManager(bus, "/xyz/openbmc_project/software");
 sdbusplus::server::manager_t sensorObjManager(bus, "/xyz/openbmc_project/sensors");
+sdbusplus::server::manager_t metricObjManager(bus, "/xyz/openbmc_project/metric");
 sdbusplus::server::manager_t inventoryManager(bus, "/xyz/openbmc_project/inventory");
 ```
 
@@ -414,6 +425,8 @@ systemctl restart pldmd
 | `system-specific-bios-json`       | feature | disabled | —                        | 系統特定 BIOS JSON 支援           |
 | `oem-ibm`                         | feature | enabled  | —                        | IBM OEM 支援                      |
 | `oem-ampere`                      | feature | enabled  | —                        | Ampere OEM 支援                   |
+| `oem-meta`                        | feature | enabled  | —                        | Meta OEM 支援                     |
+| `oem-nvidia`                      | feature | enabled  | —                        | NVIDIA OEM 支援                   |
 
 ---
 

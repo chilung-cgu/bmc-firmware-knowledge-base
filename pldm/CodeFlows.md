@@ -69,7 +69,7 @@ sequenceDiagram
 pldmd 透過 MCTP socket 接收傳入的 PLDM 訊息：
 
 ```cpp
-// 虛擬碼 — 實際實作為 processRxMsg() 在 pldmd/pldmd.cpp L102-165
+// 虛擬碼 — 實際實作為 processRxMsg() 在 pldmd/pldmd.cpp L110
 void receiveMessage(mctp_eid_t eid, uint8_t* data, size_t len) {
     // 從 MCTP 傳輸層接收原始訊息
     // 驗證 PLDM 標頭
@@ -329,7 +329,7 @@ flowchart TD
 
 > **逐步說明：**
 >
-> 這張圖展示 BMC 從遠端 Terminus 剿回 PDR 的完整流程：
+> 這張圖展示 BMC 從遠端 Terminus 拉回 PDR 的完整流程：
 >
 > 1. **MCTP 端點探索**：mctpd 發現新的 MCTP 端點，通知 pldmd。
 > 2. **初始化 Terminus**：TerminusManager 對新端點執行 `GetTID`（取得 Terminus ID）和 `GetPLDMTypes`（查詢支援的類型）。
@@ -424,6 +424,7 @@ sequenceDiagram
 - [Architecture](Architecture.md) - 系統架構
 - [CodeOrganization](CodeOrganization.md) - 程式碼組織
 - [PDRImplementation](PDRImplementation.md) - PDR 實作細節
+- [SourceCodeWalkthrough](SourceCodeWalkthrough.md) - pldmd 完整呼叫鏈走讀
 
 ---
 

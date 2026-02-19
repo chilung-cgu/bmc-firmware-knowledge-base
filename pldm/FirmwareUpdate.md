@@ -241,18 +241,18 @@ sequenceDiagram
 
 ## 原始碼結構
 
-| 檔案                                   | 大小  | 說明                                             |
-| -------------------------------------- | ----- | ------------------------------------------------ |
-| `manager.hpp`                          | 4.7KB | 模組入口，整合 InventoryMgr + UpdateMgr          |
-| `inventory_manager.cpp/hpp`            | 27KB  | FD 探索和庫存管理                                |
-| `device_updater.cpp/hpp`               | 37KB  | 單裝置更新狀態機                                 |
-| `update_manager.cpp/hpp`               | 15KB  | 更新管理器                                       |
-| ~~`aggregate_update_manager.cpp/hpp`~~ | —     | ❌ upstream 不存在（實隞名稱為 `UpdateManager`） |
-| `package_parser.cpp/hpp`               | 12KB  | FW Package 解析器                                |
-| `activation.cpp/hpp`                   | 5KB   | D-Bus 啟用介面                                   |
-| `firmware_inventory.cpp/hpp`           | 8KB   | 韌體版本 D-Bus 物件                              |
-| `firmware_inventory_manager.cpp/hpp`   | 7KB   | 韌體庫存管理                                     |
-| `watch.cpp/hpp`                        | 3KB   | 檔案監視器                                       |
+| 檔案                                 | 大小  | 說明                                    |
+| ------------------------------------ | ----- | --------------------------------------- |
+| `manager.hpp`                        | 4.7KB | 模組入口，整合 InventoryMgr + UpdateMgr |
+| `inventory_manager.cpp/hpp`          | 27KB  | FD 探索和庫存管理                       |
+| `device_updater.cpp/hpp`             | 37KB  | 單裝置更新狀態機                        |
+| `update_manager.cpp/hpp`             | 15KB  | 更新管理器                              |
+| `aggregate_update_manager.cpp/hpp`   | 6KB   | 聚合更新管理（管理多裝置聚合更新）      |
+| `package_parser.cpp/hpp`             | 12KB  | FW Package 解析器                       |
+| `activation.cpp/hpp`                 | 5KB   | D-Bus 啟用介面                          |
+| `firmware_inventory.cpp/hpp`         | 8KB   | 韌體版本 D-Bus 物件                     |
+| `firmware_inventory_manager.cpp/hpp` | 7KB   | 韌體庫存管理                            |
+| `watch.cpp/hpp`                      | 3KB   | 檔案監視器                              |
 
 ---
 

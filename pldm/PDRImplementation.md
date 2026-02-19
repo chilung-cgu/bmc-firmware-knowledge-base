@@ -54,10 +54,14 @@ PDR 透過 JSON 檔案定義，檔名對應 PDR Type：
 
 ```
 configurations/pdr/
+├── 4.json    # Numeric Sensor Init PDR (Type 4)
 ├── 11.json   # State Sensor PDR (Type 11)
-├── 14.json   # State Effecter PDR (Type 14)
-└── 15.json   # Entity Association PDR (Type 15)
+└── com.ibm.Hardware.Chassis.Model.*/ # IBM 特定配置
+    ├── 4.json
+    └── 11.json
 ```
+
+> **注意**：base 目錄僅包含 Type 4 和 Type 11 的 JSON。State Effecter (14) 和 Entity Association (15) 的 PDR 在 upstream 中是由程式碼動態生成或由其他配置驅動，而非單獨的 JSON 檔。
 
 ---
 
