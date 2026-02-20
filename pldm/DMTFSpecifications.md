@@ -227,9 +227,25 @@ stateDiagram-v2
     ACTIVATE --> [*]: Failure
 ```
 
-> **逐步說明（狀態機）**：
+> **⚠️ 注意（狀態機）**：
 >
-> IDLE → LEARN_COMPONENTS（查詢裝置）→ READY_XFER（取得韌體參數）→ DOWNLOAD（請求更新）→ VERIFY（傳遞元件表）→ APPLY（更新元件）→ ACTIVATE（啟用韌體）。這是 DSP0267 定義的標準狀態機。
+> 此狀態機圖的**狀態轉移觸發命令對應有誤**（例如圖中標示 IDLE→LEARN_COMPONENTS 的觸發是 `QueryDeviceIdentifiers`，但實際上 `QueryDeviceIdentifiers` 是 **探索階段** 的命令，不觸發 FD 進入 LEARN_COMPONENTS；真正觸發的是 `RequestUpdate`）。
+>
+> DSP0267 定義的正確狀態機與觸發命令，請參考：
+>
+> - **[TypeFirmwareUpdate.md](TypeFirmwareUpdate.md)** — FD 內部視角的完整狀態機（含正確觸發命令與每個狀態說明）
+> - **[FirmwareUpdate.md](FirmwareUpdate.md)** — UA（BMC）端 DeviceUpdater 的外部視角狀態機
+>
+> **正確的狀態轉移摘要（DSP0267）**：
+>
+> | 狀態             | 觸發進入此狀態的命令                             |
+> | ---------------- | ------------------------------------------------ |
+> | LEARN_COMPONENTS | `RequestUpdate`（UA → FD）                       |
+> | READY_XFER       | `PassComponentTable`（UA → FD）                  |
+> | DOWNLOAD         | `UpdateComponent`（UA → FD）                     |
+> | VERIFY           | `TransferComplete`（FD → UA，FD 主動）           |
+> | APPLY            | `VerifyComplete`（FD → UA，FD 主動）             |
+> | ACTIVATE         | `ApplyComplete` 最後一個元件（FD → UA，FD 主動） |
 
 ### FW Update 命令
 

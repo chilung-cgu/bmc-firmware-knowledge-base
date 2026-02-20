@@ -132,7 +132,161 @@ addr.smctp_tag = MCTP_TAG_OWNER;
 addr.smctp_tag = received_tag;  // 不含 MCTP_TAG_OWNER bit
 ```
 
+### Bound vs Unbound Socket
+
+AF_MCTP socket 有兩種使用模式，決定了它能接收什麼類型的訊息：
+
+#### Unbound Socket（未綁定）
+
+```c
+int sd = socket(AF_MCTP, SOCK_DGRAM, 0);
+// 沒有呼叫 bind()，直接 sendto()
+sendto(sd, msg, len, 0, &dest_addr, sizeof(dest_addr));
+```
+
+- 沒有固定「接收地址」，**無法被動接收別人主動傳來的 request**
+- 每次 `sendto(MCTP_TAG_OWNER)` 時，kernel 為此 socket 分配 tag，建立隱含的「回應接收通道」
+- **只能收到自己發出的 request 的 response（TO=0）**
+- 工具類程式（如 `pldmtool`）通常使用此模式
+
+#### Bound Socket（已綁定）
+
+```c
+struct sockaddr_mctp addr = {
+    .smctp_family  = AF_MCTP,
+    .smctp_addr.s_addr = MCTP_ADDR_ANY,  // 接受任何本機 EID
+    .smctp_type    = MCTP_MSG_TYPE_PLDM,  // 只收 PLDM type 訊息
+    .smctp_tag     = MCTP_TAG_OWNER,      // 接受遠端 owned tag（TO=1）的訊息
+};
+bind(sd, (struct sockaddr *)&addr, sizeof(addr));
+```
+
+- **有固定接收地址**：kernel 會把符合條件的 incoming request 投遞給此 socket
+- `smctp_tag = MCTP_TAG_OWNER` 告訴 kernel：「把帶有 remotely-owned tag（TO=1）的 request 送給我」—— 這是「接受 request」的設定，不是說「我要發 request」
+- 守護程式（如 `pldmd`）通常使用此模式，但**同時也可以主動發 request**（因為 bound socket 也可以呼叫 `sendto(MCTP_TAG_OWNER)`）
+
+#### 完整對比
+
+|                         | Unbound（`pldmtool`）                   | Bound（`pldmd`）                         |
+| ----------------------- | --------------------------------------- | ---------------------------------------- |
+| 主要功能                | 純 Requester（主動問）                  | Responder（被動答）+ Requester（主動問） |
+| 能收 TO=1（request）？  | ❌ 無 bind，收不到                      | ✅ 透過 `bind()` 接收                    |
+| 能收 TO=0（response）？ | ✅ 只收**自己**發的 request 的 response | ✅ 只收**自己**發的 request 的 response  |
+| request/response 隔離   | kernel `struct mctp_sk_key`             | 同左                                     |
+
 ---
+
+### MCTP Tag + TO bit：Response Routing 核心機制
+
+這是 AF_MCTP 最關鍵的設計，保證多個程序同時使用 MCTP 時，response 能精確路由到正確的 socket。
+
+#### 核心資料結構：`struct mctp_sk_key`
+
+當任何 socket 呼叫 `sendto(MCTP_TAG_OWNER)` 發 request 時，kernel 在 `net/mctp/route.c: mctp_alloc_local_tag()` 建立一個 **`struct mctp_sk_key`**：
+
+```c
+// include/net/mctp.h（Linux kernel）
+struct mctp_sk_key {
+    unsigned int net;       // 網路 ID
+    mctp_eid_t   local;     // 本機 EID
+    mctp_eid_t   peer;      // 對方 EID（MCTP_ADDR_ANY 表示廣播）
+    u8           tag;       // 分配到的 3-bit tag 值（0~7）
+    struct sock  *sk;       // ← 指向「發出此 request 的 socket」（關鍵）
+    bool         valid;     // key 是否仍然有效
+    // ...（reassembly 相關欄位省略）
+};
+```
+
+所有 key 被加入 per-net namespace 的全域 hash list `net->mctp.keys`（受 `keys_lock` 保護）。
+
+#### Tag 衝突迴避（`mctp_alloc_local_tag`）
+
+kernel 在為 socket 分配 tag 時，**掃描所有已有的 key**，排除衝突：
+
+```c
+// net/mctp/route.c: mctp_alloc_local_tag()（已驗證，Linux kernel）
+tagbits = 0xff;         // 8 個 tag 全部可用
+
+hlist_for_each_entry(tmp, &mns->keys, hlist) {
+    if (tmp->net != netid) continue;                     // 不同 net，不衝突
+    if (tmp->tag & MCTP_HDR_FLAG_TO) continue;           // 對方 owned，不衝突
+    if (/* peer 不匹配 */) continue;
+    if (tmp->valid)
+        tagbits &= ~(1 << tmp->tag);                     // 排除已用 tag
+}
+key->tag = __ffs(tagbits);      // 選第一個空閒的 tag
+mctp_reserve_tag(net, key, msk); // 加入 mns->keys
+```
+
+**結論：kernel 在系統層級保證，針對同一 (net, peer_EID) 對，不同 socket（如 `pldmd` 和 `pldmtool`）一定分配到不同的 tag 值。**
+
+#### Response Routing 邏輯（`mctp_dst_input`）
+
+這是 kernel 收到封包時的核心路由函式（`net/mctp/route.c`）：
+
+```c
+// net/mctp/route.c: mctp_dst_input()（已驗證，Linux kernel）
+tag = mh->flags_seq_tag & (MCTP_HDR_TAG_MASK | MCTP_HDR_FLAG_TO);
+
+// 優先路徑：查 key（通常是 TO=0 的 response）
+key = mctp_lookup_key(net, skb, netid, mh->src, &f);
+if (key)
+    msk = container_of(key->sk, struct mctp_sock, sk);  // key->sk 就是正確 socket
+
+// 備用路徑：無 key 且 TO=1（初次到達的 request）→ 找 bound socket
+if (!key && !msk && (tag & MCTP_HDR_FLAG_TO))
+    msk = mctp_lookup_bind(net, skb);
+
+// 最終只投給一個 socket（不廣播）
+sock_queue_rcv_skb(&msk->sk, skb);
+```
+
+路由決定樹：
+
+```
+收到 MCTP frame
+  │
+  ├─ mctp_lookup_key(src_EID, tag) 有匹配？
+  │     YES → key->sk（發出對應 request 的 socket）獨享此 frame
+  │
+  └─ 無 key 且 TO=1（incoming request）
+        → mctp_lookup_bind()（找 bound socket，如 pldmd）
+        → 只有 bound socket 收到
+```
+
+#### 完整場景：`pldmd` 和 `pldmtool` 同時對相同 EID 通訊
+
+```
+初始狀態：
+  pldmd    socket（bound，fd=3）
+  pldmtool socket（unbound，fd=7）
+
+T=0: pldmtool sendto(EID=12, MCTP_TAG_OWNER)
+  → kernel mctp_alloc_local_tag：tagbits=0xff，分配 tag=5
+  → 建立 key{net=1, peer=12, tag=5, sk=fd7}，加入 mns->keys
+  → 發送 MCTP frame: {src=BMC, dst=12, TO=1, tag=5, payload=PLDM_request}
+
+T=1: pldmd sendto(EID=12, MCTP_TAG_OWNER)   ← sensor polling
+  → kernel mctp_alloc_local_tag：tagbits=0xff，掃描 key{tag=5} → tagbits=0xdf，分配 tag=3
+  → 建立 key{net=1, peer=12, tag=3, sk=fd3}，加入 mns->keys
+  → 發送 MCTP frame: {src=BMC, dst=12, TO=1, tag=3, payload=PLDM_request}
+
+T=2: Remote EID=12 回傳：{src=12, TO=0, tag=5}
+  → mctp_dst_input：mctp_lookup_key(src=12, tag=5) → key{tag=5, sk=fd7}
+  → sock_queue_rcv_skb(fd7 = pldmtool)   ✓
+  → pldmd（fd3）完全不知道此 frame 的存在
+
+T=3: Remote EID=12 回傳：{src=12, TO=0, tag=3}
+  → mctp_dst_input：mctp_lookup_key(src=12, tag=3) → key{tag=3, sk=fd3}
+  → sock_queue_rcv_skb(fd3 = pldmd)      ✓
+  → pldmtool（fd7）完全不知道此 frame 的存在
+```
+
+**Kernel 官方文件**（`Documentation/networking/mctp.rst`）：
+
+> _"Sockets will only receive responses to requests they have sent (with TO=1) and may only respond (with TO=0) to requests they have received."_
+
+> _"Transmitting a message on an unconnected socket with MCTP_TAG_OWNER specified will cause an allocation of a tag, if no valid tag is already allocated for that destination. The (destination-eid, tag) tuple acts as an implicit local socket address, to allow the socket to receive responses to this outgoing message."_
 
 ## Netlink 配置
 

@@ -189,17 +189,21 @@ stateDiagram-v2
     Sending --> Failed : send() 失敗
 ```
 
-> **逐步說明（狀態機）：**
+> **逐步說明（Request 狀態機）：**
 >
-> 單一 Request 物件的狀態轉換：
+> 這張圖描述 `Request` 物件（單一 PLDM 請求）的完整生命週期狀態。底層由 `RequestRetryTimer` 實作，超時由 `sdbusplus::Timer` 計時。
 >
-> 1. **Idle → Sending**：呼叫 `start()` 開始發送。
-> 2. **Sending → WaitingResponse**：發送成功後等待回應。
-> 3. **WaitingResponse → Sending**：如果超時且還有重試次數，重新發送（預設 2 次重試）。
-> 4. **WaitingResponse → Failed**：重試次數耗盡，宣告失敗。
-> 5. **WaitingResponse → Success**：收到回應，成功。
+> | 狀態                | 說明                                                                                                                                                                                               | 觸發下一狀態                                                                                                            |
+> | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+> | **Idle**            | 初始狀態，`Request` 物件剛建立，尚未發送任何訊息。                                                                                                                                                 | 呼叫 `start()`                                                                                                          |
+> | **Sending**         | 正在呼叫 `send()`，透過 `PldmTransport::sendMsg()` 將訊息寫入 AF_MCTP socket。此操作快速完成。                                                                                                     | `send()` 成功 → WaitingResponse；`send()` 失敗（如 socket 錯誤）→ Failed                                                |
+> | **WaitingResponse** | 訊息已發出，等待遠端 Terminus 回應。同時啟動一個計時器（`responseTimeOut`，預設 2000ms）。                                                                                                         | 計時器到期且剩餘重試次數 > 0 → 重送（回 Sending）；計時器到期且重試耗盡 → Failed；收到 Instance ID 匹配的回應 → Success |
+> | **Success**         | 終止狀態。`handleResponse()` 收到匹配的回應，`Request` 物件正常結束。                                                                                                                              | —                                                                                                                       |
+> | **Failed**          | 終止狀態。有兩種進入情況：① `send()` 本身失敗（如網路錯誤）；② 超時後重試次數（`numRetries`，預設 2 次）耗盡。進入 Failed 後，Handler 會以空回應（`nullptr, 0`）呼叫原始 callback 通知呼叫者失敗。 | —                                                                                                                       |
 >
-> **白話總結**：就像打電話，無人接聽就重撥，重撥兩次還是沒人接就放棄。
+> **重試機制說明**：每次超時後，`RequestRetryTimer::callback()` 被觸發，若 `numRetries-- > 0`，重新呼叫 `send()`（等同重試）；若 `numRetries` 降至 0，呼叫 `stop()` 停止計時器並標記 Failed。
+>
+> **白話總結**：就像打電話後等對方接——電話打通（Sending）→ 等待接聽（WaitingResponse）→ 對方接了（Success）；或者等了 2 秒沒人接，就重撥（重試），撥了 2 次還沒人接就放棄（Failed）。
 
 ```cpp
 // 抽象基底類別：重試計時器

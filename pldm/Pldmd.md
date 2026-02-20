@@ -83,6 +83,21 @@ flowchart TD
 >
 > **`mctp-demux`（舊式架構，已淘汰）**：pldmd 透過 Unix Domain Socket 連線 `mctp-demux-daemon`，由該 daemon 代替開啟 AF_MCTP socket 並將訊息廣播給所有訂閱的 client。這個 daemon **才是實際參與訊息傳遞的中間人**，不是 `mctpd`。現代 OpenBMC 已淘汰此架構。
 
+#### AF-MCTP Response Routing 核心機制
+
+當 `pldmd` 與 `pldmtool` 同時運行時，兩者各有獨立的 AF_MCTP socket：
+
+| 行程       | Socket 類型 | 角色                                                                                                     | 能收到什麼                                                                  |
+| ---------- | ----------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `pldmd`    | **Bound**   | ① Responder：`bind()` 接收遠端發來的 request（TO=1）<br>② Requester：主動發 request（sensor polling 等） | ① incoming requests（TO=1）<br>② **自己**發出的 request 的 response（TO=0） |
+| `pldmtool` | **Unbound** | Requester：主動發 request                                                                                | **自己**發出的 request 的 response（TO=0）                                  |
+
+> ⚠️ **常見誤解**：`pldmd` 並**不是**只收 TO=1 的訊息，它也會收到自己 sensor polling 等 request 的 response（TO=0）。兩者的 response 隔離靠 kernel 的 **MCTP Tag**（3-bit）而非 TO bit 本身。
+
+**Kernel 如何確保 response 只送給正確的 socket**：每次 `sendto(MCTP_TAG_OWNER)` 時，kernel 為該 socket 分配一個不衝突的 tag 值，並建立 `{peer_EID, tag} → socket` 的對應記錄（`struct mctp_sk_key`）。Response 回來時（TO=0），kernel 查此記錄，直接投遞——`pldmd` 和 `pldmtool` 的 response 因 tag 值不同，在 kernel 層就已完全隔離。
+
+> 📖 **深度原理（含 kernel 原始碼 `net/mctp/route.c`）**：詳見 [KernelStack.md §Bound vs Unbound Socket](../mctp/KernelStack.md)
+
 > ⚠️ **簡化說明**：以下為 `PldmTransport` 類別的主要公開 API 概覽，省略了部分 private 成員和條件編譯細節。完整定義請見 `common/transport.hpp`。
 
 ```cpp

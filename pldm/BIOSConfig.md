@@ -158,9 +158,21 @@ classDiagram
     BIOSConfig --> "many" BIOSAttribute
 ```
 
-> **逐步說明（類別圖）：**
+> **逐步說明（BIOS 屬性類別圖）：**
 >
-> BIOSConfig 持有多個 BIOSAttribute，每個屬性是三種子類之一：Enum（列舉）、Integer（整數）、String（字串）。每個子類有自己的屬性（如 possibleValues、lowerBound、maxLength），但共享相同的介面。
+> 這張圖展示 BIOS 屬性的繼承體系（Template Method Pattern）：
+>
+> | 類別                      | 角色                                     | 主要成員                                                                                                                                                                                                                                             |
+> | ------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | **BIOSAttribute**（抽象） | 所有 BIOS 屬性的共同介面                 | `name`（屬性名稱）、`readOnly`（唯讀旗標）、`constructEntry()`（在 Attribute Table 中建立條目）、`updateDbusProperty()`（同步到 D-Bus）                                                                                                              |
+> | **BIOSEnumAttribute**     | 列舉型屬性（如 BootMode: Legacy / UEFI） | `possibleValues`（合法值列表）、`defaultValues`（預設值列表）。需要在 String Table 中為每個可能值建立字串條目。                                                                                                                                      |
+> | **BIOSIntegerAttribute**  | 整數型屬性（如 Memory Mirroring: 0~100） | `lowerBound`（下限）、`upperBound`（上限）、`scalarIncrement`（步進值）、`defaultValue`（預設值）。                                                                                                                                                  |
+> | **BIOSStringAttribute**   | 字串型屬性（如 AssetTag: "Server01"）    | `stringType`（ASCII/UTF-8 等）、`minLength`、`maxLength`、`defaultString`。                                                                                                                                                                          |
+> | **BIOSConfig**            | 所有屬性的容器與管理者                   | 維護三張表格：`biosStringTable`、`biosAttributeTable`、`biosAttributeValueTable`，以及 `biosAttributes` 向量。`buildTables()` 是建表的入口，`getBIOSTable()` 提供給 Handler 讀取，`setBIOSAttrCurrentValue()` 負責接收 Host 寫入的變更並更新 D-Bus。 |
+>
+> **設計模式**：這是 **Strategy Pattern** 的實作。`BIOSConfig` 呼叫 `BIOSAttribute::constructEntry()`，由子類決定「如何在表格中建立自己的條目格式」，彼此互不干涉。
+>
+> **白話總結**：三種屬性都有「名字」、「能讀寫」的共同特性（父類），但 Enum 有可選清單、Integer 有範圍約束、String 有長度限制（各自的子類特性）。BIOSConfig 是「管理員」，持有所有屬性並負責建表給 Host 讀取。
 
 ---
 
