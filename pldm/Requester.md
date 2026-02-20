@@ -239,20 +239,111 @@ class Request final : public RequestRetryTimer {
 
 ### 4. Coroutine API（C++20 Sender/Receiver）
 
+> 📖 **背景概念：Coroutine 與 stdexec 是什麼？**
+>
+> #### Coroutine（協程）是什麼？
+>
+> Coroutine 是 C++20 引入的語言功能。它讓你可以把「**等待某件非同步事情完成**」的程式碼，寫得像一般的**同步、直線式**程式碼，不需要手動傳 callback。
+>
+> 核心關鍵字是 `co_await`。它的意思是：「**暫停這個函式，等待這個操作完成，完成後從這裡繼續**」。
+>
+> ```cpp
+> // 舊式 callback （難讀）：你必須把「收到回應之後要做什麼」
+> // 包成一個 lambda 傳進去，程式流程是分裂的
+> handler.registerRequest(eid, instanceId, ..., [](auto eid, auto resp, auto len) {
+>     // 這裡才是「收到回應之後」的邏輯
+>     process(resp);
+> });
+>
+> // 新式 coroutine（好讀）：整個流程是連續的，就像同步程式碼
+> auto [rc, resp, len] = co_await handler.sendRecvMsg(eid, std::move(request));
+> process(resp);  // 這行在「收到回應之後」自動繼續執行
+> ```
+>
+> **關鍵認知**：`co_await` 並不會「卡住整個程式」。它只是讓**當前這個函式**暫停，讓事件迴圈繼續處理其他事件。等回應到了，才喚醒這個函式繼續跑。BMC 不會因此 hang 住。
+>
+> #### stdexec（Sender/Receiver）是什麼？
+>
+> stdexec 是一個 C++ 函式庫（正在走向 C++ 標準化），提供「**Sender/Receiver**」框架，是 coroutine 的底層實作機制之一。
+>
+> 你不需要深入理解它的內部——只需要知道以下對照：
+>
+> | 概念              | 白話意思                                                           |
+> | ----------------- | ------------------------------------------------------------------ |
+> | **Sender**        | 「一個承諾：我會在未來某個時間點完成，並給你結果」（類似 Promise） |
+> | **Receiver**      | 「約定好當 Sender 完成時，要呼叫的後續動作」                       |
+> | `co_await sender` | 語法糖：自動把後面的程式碼包成 Receiver，讓 Sender 完成時繼續執行  |
+>
+> 在 PLDM 程式碼裡，`handler.sendRecvMsg()` 回傳的就是一個 **Sender**——它代表「發出這個 PLDM request、等待回應」這整個非同步操作。
+>
+> #### 作個比喻
+>
+> 想像你在餐廳點餐後拿了號碼牌等待：
+>
+> - **舊式 callback**：你把電話號碼留給服務員，說「做好了打電話給我」，然後去做別的事。問題是你的「等餐邏輯」和「接到通知後的邏輯」分散在兩個地方，程式很難追。
+> - **co_await**：你坐在位子上「等」，但等待期間椅子可以讓給別人坐（事件迴圈繼續跑），餐來了你自動回來繼續。程式是一條直線。
+
 Handler 提供了基於 C++20 stdexec 的 coroutine API：
 
 ```cpp
-// 回傳型別
+// ① 定義回傳型別：一個裝三個值的「束包」
 using SendRecvCoResp = std::tuple<int, const pldm_msg*, size_t>;
-// [PLDM_SUCCESS, resp, len]       — 成功
-// [PLDM_ERROR, nullptr, 0]        — registerRequest 失敗
-// [PLDM_ERROR_NOT_READY, nullptr, 0] — 超時無回應
+//                                ^^^   ^^^^^^^^^^^^^   ^^^^^^
+//                                rc    resp 指標       len
+```
 
-// 使用方式（在 coroutine 中）
+`std::tuple` 是 C++ 標準的「固定欄位束包」。這裡裝了三個值：
+
+| 位置    | 型別              | 變數名 | 意義                                                                 |
+| ------- | ----------------- | ------ | -------------------------------------------------------------------- |
+| 第 1 個 | `int`             | `rc`   | 回傳碼（Result Code）。`PLDM_SUCCESS=0` 代表成功，其他值代表錯誤     |
+| 第 2 個 | `const pldm_msg*` | `resp` | 指向 PLDM 回應訊息的指標（失敗時是 `nullptr`——空指標，代表沒有回應） |
+| 第 3 個 | `size_t`          | `len`  | 回應訊息的長度（bytes）。失敗時是 `0`                                |
+
+三種可能結果：
+
+| `rc`                   | `resp`    | `len` | 代表什麼                                      |
+| ---------------------- | --------- | ----- | --------------------------------------------- |
+| `PLDM_SUCCESS`         | 有效指標  | > 0   | ✅ 成功收到 PLDM 回應                         |
+| `PLDM_ERROR`           | `nullptr` | 0     | ❌ `registerRequest()` 失敗（在發送前就出錯） |
+| `PLDM_ERROR_NOT_READY` | `nullptr` | 0     | ⏰ 超時無回應（發出去了但 Terminus 沒回）     |
+
+```cpp
+// ② 實際呼叫方式（在 coroutine 函式中）
 auto [rc, resp, len] = co_await handler.sendRecvMsg(eid, std::move(request));
 ```
 
-內部由 `SendRecvMsgSender` 和 `SendRecvMsgOperation` 實作，支援取消（stop token）。
+逐一拆解這行：
+
+| 語法片段                        | 說明                                                                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `co_await`                      | **暫停在這裡**，等 `sendRecvMsg` 完成（發送 + 等回應），完成後繼續往下                                                      |
+| `handler.sendRecvMsg(eid, ...)` | 呼叫 Handler 的「發送並等待回應」方法，回傳一個 **Sender**（代表整個非同步操作）                                            |
+| `std::move(request)`            | 把 `request` 的所有權「移交」給函式，避免複製大型物件（C++11 move semantics）。移交後 `request` 不可再用                    |
+| `auto [rc, resp, len] = ...`    | **C++17 結構化綁定（Structured Binding）**：自動把 tuple 的三個值拆開分別命名為 `rc`、`resp`、`len`，等同於分別宣告三個變數 |
+
+**白話讀法**：「把這個 PLDM request 交給 Handler 去發（`sendRecvMsg`），在這裡等（`co_await`），等到回應了，把結果的三個值取出來，分別叫 rc（是否成功）、resp（回應內容）、len（長度）」。
+
+完整使用範例（如何實際判斷結果）：
+
+```cpp
+// 在某個 coroutine 函式中：
+auto [rc, resp, len] = co_await handler.sendRecvMsg(eid, std::move(request));
+
+if (rc != PLDM_SUCCESS || resp == nullptr) {
+    // 失敗處理：可能是超時或發送本身出錯
+    return;
+}
+
+// 成功：resp 是指向回應資料的指標，len 是資料長度
+// 接著解析 resp 即可
+```
+
+> **`SendRecvMsgSender` 和 `stop token` 是什麼（可跳過）**
+>
+> `SendRecvMsgSender` 是 `sendRecvMsg()` 在內部建立並回傳的 Sender 物件。用來把「發送 PLDM request + 等待回應」這整件事包裝成一個可以被 `co_await` 的東西（這是 stdexec 框架的寫法）。
+>
+> `stop token` 是「取消令牌」：如果整個任務需要提前取消（例如 BMC 要關機），可以透過 stop token 通知 Sender 中止等待，不用繼續等回應。一般讀 code 時不需要深究，知道「它支援中途取消操作」即可。
 
 ---
 
@@ -326,7 +417,14 @@ std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
                  fwManager.get(), platformManager.get()});
 ```
 
-即 `fw_update::Manager` 和 `platform_mc::Manager` 會收到 MCTP 端點的新增/移除/可用性變更通知。
+> `std::initializer_list<...>{ A, B }` 是 C++ 的「**初始化清單**」語法——就是用 `{}` 大括號把多個值列出來，傳給函式當作一份清單。這裡的意思是「把這兩個 Manager 的指標，打包成一份清單傳入」。
+
+**白話翻譯**：「建立一個 `MctpDiscovery` 哨兵，連接到 D-Bus，並登記說：一旦有 MCTP 端點變動（新增、移除、狀態改變），就去通知 **Firmware Update Manager** 和 **Platform MC Manager**。」
+
+**為什麼通知這兩個？**
+
+- **`fw_update::Manager`**：需要知道有哪些 MCTP 端點，才能對它們執行韌體更新
+- **`platform_mc::Manager`**：需要知道有哪些 MCTP 端點，才能跟它們進行 sensor polling 等 Platform MC 操作
 
 ### 端點資訊
 

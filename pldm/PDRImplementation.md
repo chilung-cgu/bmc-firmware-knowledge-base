@@ -122,10 +122,44 @@ graph TD
 
 BMC 透過 `PlatformManager::getPDRs()` 從遠端 Terminus 拉取 PDR：
 
-1. 先呼叫 `GetPDRRepositoryInfo` 取得 `recordCount` 和 `largestRecordSize`
-2. 在 `do-while` 迴圈中逐筆呼叫 `GetPDR`
-3. **支援 multi-part transfer**：當 PDR 記錄超過單次傳輸大小時，使用 `PLDM_GET_FIRSTPART` / `PLDM_GET_NEXTPART` 分段拉取
-4. 拉取完成後呼叫 `terminus->parseTerminusPDRs()` 解析所有 PDR
+```mermaid
+flowchart TD
+    A["PlatformManager::initTerminus()"] --> B["getPDRRepositoryInfo(tid)"]
+    B --> C{"取得 recordCount\n& dataTransferHandleTimeout"}
+    C --> D["初始化：recordHandle = 0\n(從第一筆開始)"]
+    D --> E["do-while 迴圈開始"]
+
+    E --> F["getPDR(tid, recordHandle,\n dataTransferHandle, GET_FIRSTPART)\n↓ co_await sendRecvPldmMsg"]
+    F --> G{"transferFlag?"}
+
+    G -->|"PLDM_PLATFORM_TRANSFER_START_AND_END\n（單次完整）"| H["appendPDR(data)"]
+    G -->|"PLDM_PLATFORM_TRANSFER_START / MIDDLE\n（分段傳輸）"| I["分段：appendPDR(data)\nGET_NEXTPART 繼續"]
+    I --> J["迴圈直到 transferFlag == END"]
+    J --> H
+
+    H --> K["nextRecordHandle = response.nextRecordHandle"]
+    K --> L{"nextRecordHandle == 0\n（沒有下一筆）?"}
+    L -->|"否"| M["recordHandle = nextRecordHandle"]
+    M --> E
+    L -->|"是（全部拉取完成）"| N["terminus->parseTerminusPDRs()"]
+
+    N --> N1["解析 Numeric Sensor PDR\n→ 建立 NumericSensor 物件"]
+    N --> N2["解析 Compact Numeric Sensor\n→ 建立 NumericSensor 物件"]
+    N --> N3["解析 Auxiliary Names PDR\n→ 設定 Terminus/Sensor 名稱"]
+    N1 & N2 & N3 --> O["PDR 拉取完成\n(SensorManager::startPolling 隨後啟動)"]
+```
+
+> **逐步說明：**
+>
+> **步驟 1：先查元資料**：呼叫 `GetPDRRepositoryInfo` 取得 `recordCount`（PDR 總數）和 `largestRecordSize`（最大單筆大小），用於事先分配緩衝區。
+>
+> **步驟 2：迴圈拉取**：以 `recordHandle = 0` 開始，每次呼叫 `GetPDR` 取得一筆 PDR（或分段取得大型 PDR）。回應中的 `nextRecordHandle` 告知下一筆位置；若為 `0` 表示已是最後一筆。
+>
+> **步驟 3：分段傳輸（Multi-part Transfer）**：單筆 PDR 資料超過傳輸大小上限時，用 `transferFlag` 協調多次請求（`START` → `MIDDLE`... → `END`）。各段資料依序拼接，`END` 段附帶 CRC8 校驗碼。
+>
+> **步驟 4：解析 PDR**：全部 PDR 拉取完成後，`terminus->parseTerminusPDRs()` 逐一解析，依 PDR 類型建立對應物件（`NumericSensor`）或設定屬性（名稱、閾值）。
+>
+> **白話總結**：就像圖書館館員一本一本抄書——先知道總冊數（RepositoryInfo），再逐本借閱（GetPDR），有些大書要分章節借（分段），全抄完才整理上架（parseTerminusPDRs）。
 
 > [!NOTE]
 > multi-part transfer 使用 `dataTransferHandle` 串接各段資料，直到 `transferFlag == PLDM_PLATFORM_TRANSFER_END`

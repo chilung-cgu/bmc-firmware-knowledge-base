@@ -192,6 +192,55 @@ $ systemctl restart pldmd
 # 或減少並發請求數
 ```
 
+### 問題 7：Sensor 數值不更新（stuck at initial value）
+
+**症狀**：D-Bus 上 `/xyz/openbmc_project/sensors/...` 的 Sensor 數值一直不變，或 BMC 上看不到預期的 Sensor 物件。
+
+**診斷步驟**：
+
+**Step 1：確認 Terminus 是否被發現**
+
+```bash
+# 確認 platform-mc 發現的 Terminus 列表
+$ busctl tree xyz.openbmc_project.PLDM | grep terminus
+# 或確認 pldmd 日誌是否有 "initMctpTerminus" 或 "addTerminus"
+$ journalctl -u pldmd | grep -i "terminus\|initMctp"
+```
+
+**Step 2：確認 PDR 是否成功拉取**
+
+```bash
+# 確認是否有 NumericSensor 相關日誌
+$ journalctl -u pldmd | grep -i "getPDR\|parseTerminus\|NumericSensor"
+# 確認 D-Bus 上是否已有 Sensor 物件
+$ busctl tree xyz.openbmc_project.PLDM | grep sensors
+```
+
+**Step 3：確認 SensorManager 是否啟動輪詢**
+
+```bash
+# 查看是否有 doSensorPolling 相關的 verbose 輸出
+$ pldmd --verbose 2>&1 | grep -i "polling\|GetSensor"
+```
+
+**Step 4：確認 Sensor 輪詢間隔設定**
+
+```bash
+# 確認 meson 選項（編譯時設定）
+# sensor-polling-time: Terminus sensor 輪詢 timer（預設 249ms）
+# default-sensor-update-interval: 預設 Sensor 輪詢間隔（預設 999ms）
+```
+
+**常見原因**：
+
+| 原因                                              | 解決方案                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------- |
+| Terminus 未完成 TID 分配（initMctpTerminus 失敗） | 確認 MCTP 連通性、`GetTID`/`SetTID` 是否有回應                |
+| PDR 拉取失敗（GetPDR 超時）                       | 增大 `response-time-out`，確認裝置 PLDM Platform 能力已啟用   |
+| Terminus 被標記為 NOT_READY                       | 查看 pldmd 日誌中是否有 Availability 相關錯誤                 |
+| Sensor 尚未被加入輪詢清單                         | 確認 PDR 中該 Sensor 的 `sensorOperationalState` == `enabled` |
+| `updateTime` 節流：尚未到讀取時機                 | 這是正常 round-robin 優化——等下一個輪詢週期即可，無需修改     |
+
 ---
 
 ## Timing 參數調校

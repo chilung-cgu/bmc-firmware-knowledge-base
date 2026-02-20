@@ -248,11 +248,11 @@ MCTP Packet:
 ```mermaid
 sequenceDiagram
     participant BMC as BMC (TID: 1)
-    participant New as New Terminus
+    participant New as 新 Terminus
 
-    Note over BMC,New: TID 分配流程
-    New->>BMC: GetTID Request
-    BMC->>New: GetTID Response (TID: 1)
+    Note over BMC,New: TID 分配流程（BMC 主動發起）
+    BMC->>New: GetTID Request
+    New->>BMC: GetTID Response (TID: 0x00 = PLDM_TID_UNASSIGNED)
     BMC->>New: SetTID Request (TID: 2)
     New->>BMC: SetTID Response (Success)
 
@@ -263,11 +263,11 @@ sequenceDiagram
 >
 > TID 分配流程：
 >
-> 1. 新裝置向 BMC 發送 `GetTID` 請求，BMC 回報自己的 TID。
-> 2. BMC 用 `SetTID` 分配一個新的 TID 給新裝置。
-> 3. 之後所有通訊都使用這個 TID 來識別裝置。
+> 1. **BMC 主動詢問**：當 mctpd 發現新 MCTP 端點時，通知 BMC。BMC 作為 Requester 主動向新裝置發送 `GetTID`，查詢其目前持有的 TID。
+> 2. **裝置回報 TID**：裝置回傳目前的 TID。若為 `0x00`（`PLDM_TID_UNASSIGNED`）表示從未被分配過；若有非零值則表示裝置自上次斷線保留了舊 TID。
+> 3. **BMC 分配並指派**：若需要新 TID，BMC 從 TID Pool 找一個空閒值，用 `SetTID` 指派給新裝置。
 >
-> **白話總結**：就像辦公室新人報到——先知道主管是誰，再被分配一個工號（TID）。
+> **白話總結**：BMC 是主動的那一方——見到新面孔（新裝置），主動上前問「你有工號嗎？」沒有就分配一個；有的話確認一下是否衝突。
 
 ---
 
