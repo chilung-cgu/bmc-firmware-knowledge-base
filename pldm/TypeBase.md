@@ -189,7 +189,7 @@ sequenceDiagram
 
     Note over BMC,New: 1. 查詢 TID（BMC 主動發起）
     BMC->>New: GetTID Request
-    New->>BMC: GetTID Response (TID: 0x00 = PLDM_TID_UNASSIGNED)
+    New->>BMC: GetTID Response<br>(TID: 0x00 = PLDM_TID_UNASSIGNED)
 
     Note over BMC,New: 2. 分配新 TID
     BMC->>New: SetTID Request (TID: 2)

@@ -24,7 +24,7 @@ sequenceDiagram
 
     Note over Remote,DBus: 步驟 a: 接收請求
     Remote->>KernelMCTP: PLDM Request Message
-    Note over KernelMCTP: Kernel 查路由表，遞送至監聴對應 EID 的 socket<br/>(路由表由 mctpd 在初始化時建立，不是由 mctpd 轉發)
+    Note over KernelMCTP: Kernel 查路由表，遞送至監聴<br>對應 EID 的 socket<br/>(路由表由 mctpd 在<br>初始化時建立，不是由 mctpd 轉發)
     KernelMCTP->>pldmd: recvfrom(AF_MCTP socket)
 
     Note over Remote,DBus: 步驟 b: 路由到 Handler
@@ -175,7 +175,7 @@ sequenceDiagram
 
     Note over App,Remote: 步驟 b: 發送請求
     Req->>KernelMCTP: sendto(AF_MCTP socket, EID=x)
-    Note over KernelMCTP: Kernel 負責查路由表、進行實體傳輸<br/>不需要任何中間 daemon
+    Note over KernelMCTP: Kernel 負責查路由表、<br>進行實體傳輸<br/>不需要任何中間 daemon
     KernelMCTP->>Remote: PLDM Request
 
     Note over App,Remote: 步驟 c: 接收回應
@@ -288,8 +288,8 @@ if (completionCode == PLDM_SUCCESS) {
 ```mermaid
 flowchart TD
     Start["pldmd 啟動"] --> LoadJSON["載入 PDR JSON<br/>configurations/*.json"]
-    LoadJSON --> ParsePDR["解析 JSON 生成 PDR"]
-    ParsePDR --> CreateRepo["建立 PDR Repository"]
+    LoadJSON --> ParsePDR["解析 JSON<br>生成 PDR"]
+    ParsePDR --> CreateRepo["建立 PDR<br>Repository"]
     CreateRepo --> HostPDR{"Host PDR?"}
 
     HostPDR -->|Yes| FetchHost["從 Host 獲取 PDR"]
@@ -319,11 +319,11 @@ flowchart TD
 flowchart TD
     Discover["MCTP 端點探索"] --> Init["TerminusManager.initMctpTerminus()"]
     Init --> TID["GetTID / SetTID"]
-    TID --> Types["GetPLDMTypes / GetPLDMCommands"]
-    Types --> PlatInit["PlatformManager.initTerminus()"]
+    TID --> Types["GetPLDMTypes /<br>GetPLDMCommands"]
+    Types --> PlatInit["PlatformManager<br>.initTerminus()"]
     PlatInit --> FRU["GetFRURecordTable"]
-    FRU --> GetPDR["GetPDRRepositoryInfo → GetPDR 迴圈"]
-    GetPDR --> Parse["terminus→parseTerminusPDRs()"]
+    FRU --> GetPDR["GetPDRRepositoryInfo<br>→ GetPDR 迴圈"]
+    GetPDR --> Parse["terminus→<br>parseTerminusPDRs()"]
     Parse --> EventCfg["SetEventReceiver"]
     EventCfg --> Poll["startSensorPolling(tid)"]
 ```

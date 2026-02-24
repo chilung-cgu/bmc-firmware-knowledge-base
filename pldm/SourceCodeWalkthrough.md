@@ -96,7 +96,7 @@ flowchart TD
     end
     A --> LIBPLDMRESPONDER
 
-    A --> M["registerHandler() L354-357"]
+    A --> M["registerHandler()<br>L354-357"]
     M --> C
 
     A --> N["fwManager L343"]
@@ -105,16 +105,16 @@ flowchart TD
     O --> E
 
     A --> P["IO callback L350"]
-    P --> Q["pldmTransport.recvMsg() L371"]
+    P --> Q["pldmTransport<br>.recvMsg() L371"]
     Q --> R["processRxMsg() L384"]
 
     R --> |"Request"| S["invoker.handle() L127"]
     S --> T["CmdHandler.handle() L39"]
     T --> U["handlers.at(command) L39"]
 
-    R --> |"Response"| V["handler.handleResponse() L161"]
+    R --> |"Response"| V["handler.handleResponse()<br>L161"]
 
-    R --> |"PLDM_FWUP"| W["fwManager.handleRequest() L132"]
+    R --> |"PLDM_FWUP"| W["fwManager<br>.handleRequest() L132"]
 
     A --> X["event.loop() L452"]
 ```
@@ -367,7 +367,7 @@ flowchart TD
     F --> F2["SetEventReceiver"]
     F --> F3["GetPDR"]
 
-    C --> G["PDR 解析 → D-Bus 物件"]
+    C --> G["PDR 解析<br>→ D-Bus 物件"]
 
     D --> H["Sensor 輪詢"]
     H --> H1["GetSensorReading"]
@@ -454,14 +454,14 @@ BMC 啟動時，如果 Host 正在運行：
 
 ```mermaid
 flowchart TD
-    A["MctpDiscovery 發現新裝置"] --> B["InventoryManager.discoverFDs()"]
+    A["MctpDiscovery 發現新裝置"] --> B["InventoryManager<br>.discoverFDs()"]
     B --> C["QueryDeviceIdentifiers"]
     C --> D["GetFirmwareParameters"]
     D --> E["D-Bus: 發布韌體庫存"]
 
-    F["使用者觸發更新"] --> G["UpdateManager.processPackage()"]
+    F["使用者觸發更新"] --> G["UpdateManager<br>.processPackage()"]
     G --> H["PackageParser 解析 FW Package"]
-    H --> I["DeviceUpdater.startUpdate()"]
+    H --> I["DeviceUpdater<br>.startUpdate()"]
 
     I --> J["RequestUpdate"]
     J --> K["PassComponentTable"]
@@ -537,8 +537,8 @@ MctpDiscovery 接收 handler list（std::initializer_list<MctpDiscoveryHandlerIn
 ```
 #ifdef OEM_IBM   → OemIBM 擴充（ibm-specific handler）
 #ifdef OEM_AMPERE → OemAMPERE 擴充（ampere-specific handler）
-#ifdef OEM_META  → OemMETA 擴充（meta-specific handler）
-#ifdef OEM_NVIDIA → OemNVIDIA 擴充（nvidia-specific handler）
+#ifdef OEM_META  → OemMETA 擴充（meta-specific handler, 特定分支/下游擴充）
+#ifdef OEM_NVIDIA → OemNVIDIA 擴充（nvidia-specific handler, 特定分支/下游擴充）
 #ifdef LIBPLDMRESPONDER → 啟用 BMC 側回應（Host-facing handler）
 
 OEM 擴充透過在建構函式中向 Invoker 註冊額外 Handler 來實現。

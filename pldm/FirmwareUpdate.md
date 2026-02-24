@@ -236,7 +236,7 @@ sequenceDiagram
     loop 每個 Component
         BMC->>FD: UpdateComponent
         FD-->>BMC: OK
-        FD->>BMC: RequestFirmwareData (FD 主動索取資料)
+        FD->>BMC: RequestFirmwareData<br>(FD 主動索取資料)
         BMC-->>FD: 韌體二進位資料
         FD->>BMC: TransferComplete
         FD->>BMC: VerifyComplete

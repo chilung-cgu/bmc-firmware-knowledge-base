@@ -395,28 +395,28 @@ class SensorManager {
 
 ```mermaid
 flowchart TD
-    A["PlatformManager::initTerminus() 完成"] --> B["manager->startSensorPolling(tid)"]
-    B --> C["SensorManager::startPolling(tid)"]
-    C --> C1["roundRobinSensorItMap[tid] = 0"]
-    C1 --> C2["updateAvailableState(tid, true)"]
-    C2 --> C3["sensorPollTimers[tid] = new sdbusplus::Timer\n(callback: doSensorPolling)"]
-    C3 --> C4["startSensorPollTimer(tid)\n啟動 repeating timer（pollingTime ms）"]
+    A["PlatformManager::<br>initTerminus() 完成"] --> B["manager-><br>startSensorPolling(tid)"]
+    B --> C["SensorManager::<br>startPolling(tid)"]
+    C --> C1["roundRobinSensorItMap<br>[tid] = 0"]
+    C1 --> C2["updateAvailableState<br>(tid, true)"]
+    C2 --> C3["sensorPollTimers[tid] =<br>new sdbusplus::Timer<br>(callback: doSensorPolling)"]
+    C3 --> C4["startSensorPollTimer(tid)<br>啟動 repeating timer<br>（pollingTime ms）"]
 
     C4 -->|"Timer 每次觸發"| D["doSensorPolling(tid)"]
     D --> D1{{"上次 coroutine 是否完成?"}}
-    D1 -->|"仍在執行（rcOpt 無值）"| D2["直接 return（跳過此次觸發）"]
+    D1 -->|"仍在執行（rcOpt 無值）"| D2["直接 return<br>（跳過此次觸發）"]
     D1 -->|"已完成"| D3["清除舊 handle"]
-    D3 --> D4["scope.spawn(doSensorPollingTask(tid))"]
+    D3 --> D4["scope.spawn<br>(doSensorPollingTask(tid))"]
 
-    D4 --> E["doSensorPollingTask(tid) coroutine"]
-    E --> E1{{"getAvailableState(tid) == false?"}}
-    E1 -->|"true"| E2["co_await just_stopped()\n（協程被 cancel，等待恢復）"]
-    E1 -->|"false"| E3{{"terminus->pollEvent == true?"}}
-    E3 -->|"true"| E4["co_await pollForPlatformEvent()\n（EventManager 處理輪詢事件）"]
-    E3 -->|"false"| E5["co_await oemPollForPlatformEvent()"]
-    E4 --> E6["Round Robin Sensor 讀取迴圈"]
+    D4 --> E["doSensorPollingTask(tid)<br>coroutine"]
+    E --> E1{{"getAvailableState(tid)<br>== false?"}}
+    E1 -->|"true"| E2["co_await just_stopped()<br>（協程被 cancel，等待恢復）"]
+    E1 -->|"false"| E3{{"terminus->pollEvent<br>== true?"}}
+    E3 -->|"true"| E4["co_await pollForPlatformEvent()<br>（EventManager 處理輪詢事件）"]
+    E3 -->|"false"| E5["co_await<br>oemPollForPlatformEvent()"]
+    E4 --> E6["Round Robin Sensor<br>讀取迴圈"]
     E5 --> E6
-    E6 --> E7["co_await getSensorReading(sensor)\n→ GetSensorReading → updateReading()"]
+    E6 --> E7["co_await getSensorReading(sensor)<br>→ GetSensorReading<br>→ updateReading()"]
     E7 --> E8{{"已讀完所有 Sensor 或時間耗盡?"}}
     E8 -->|"否"| E6
     E8 -->|"是"| E9["co_return PLDM_SUCCESS"]
@@ -479,24 +479,19 @@ flowchart TD
     D -->|"PLDM_SENSOR_EVENT"| E["decode_sensor_event_data()"]
     E --> F{{"sensorEventClassType?"}}
     F -->|"PLDM_NUMERIC_SENSOR_STATE"| G["processNumericSensorEvent(tid, sensorId)"]
-    G --> G1["decode_numeric_sensor_data()
-取得 eventState, previousEventState, presentReading"]
-    G1 --> G2["triggerNumericSensorThresholdEvent()
-逐段觸發閾值事件（支援跨閾值）"]
-    G2 --> G3["sensor->triggerThresholdEvent(level, direction, value)
-更新 D-Bus 告警狀態"]
+    G --> G1["decode_numeric_sensor_data()<br>取得 eventState, previousEventState, presentReading"]
+    G1 --> G2["triggerNumericSensorThresholdEvent()<br>逐段觸發閾值事件（支援跨閾值）"]
+    G2 --> G3["sensor->triggerThresholdEvent(level, direction, value)<br>更新 D-Bus 告警狀態"]
     F -->|"PLDM_STATE_SENSOR_STATE / PLDM_SENSOR_OP_STATE"| F2["log: Unsupported → return PLDM_ERROR"]
 
     D -->|"PLDM_CPER_EVENT"| H["processCperEvent(tid, eventId)"]
     H --> H1["decode_pldm_platform_cper_event()"]
     H1 --> H2["寫入 /var/cper/cper-XXXXXX 臨時檔"]
-    H2 --> H3["createCperDumpEntry() 呼叫 D-Bus\nxyz.openbmc_project.dump.faultlog"]
+    H2 --> H3["createCperDumpEntry() 呼叫 D-Bus<br>xyz.openbmc_project.dump.faultlog"]
 
     D -->|"PLDM_MESSAGE_POLL_EVENT"| I["decode_pldm_message_poll_event_data()"]
-    I --> I1["terminus->pollEvent = true
-terminus->pollEventId = event_id
-terminus->pollDataTransferHandle = handle"]
-    I1 --> I2["return PLDM_SUCCESS\n（等待下一輪 SensorManager Polling 中觸發輪詢）"]
+    I --> I1["terminus->pollEvent = true<br>terminus->pollEventId = event_id<br>terminus->pollDataTransferHandle = handle"]
+    I1 --> I2["return PLDM_SUCCESS<br>（等待下一輪 SensorManager Polling 中觸發輪詢）"]
 ```
 
 **路徑 B：主動輪詢（PollForPlatformEventMessage）**

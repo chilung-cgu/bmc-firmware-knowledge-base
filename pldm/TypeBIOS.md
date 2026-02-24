@@ -249,7 +249,7 @@ flowchart TD
     Start["pldmd 啟動"]
     Start --> WaitType["等待系統類型"]
     WaitType --> GetType["從 Entity Manager 取得<br/>Compatible.Names"]
-    GetType --> FindJSON["搜尋 oem/.../configurations/bios/<system_type>"]
+    GetType --> FindJSON["搜尋 oem/.../configurations<br>/bios/&lt;system_type&gt;"]
     FindJSON --> LoadJSON["載入 bios_attrs.json"]
     LoadJSON --> BuildTable["建立 BIOS Tables"]
     BuildTable --> Publish["發布到 D-Bus"]

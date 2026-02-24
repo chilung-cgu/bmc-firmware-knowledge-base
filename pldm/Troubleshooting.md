@@ -251,7 +251,7 @@ graph LR
     Wait -->|"超時"| Retry["重試<br/>number-of-request-retries<br/>(預設 2次)"]
     Retry -->|"超時"| Retry
     Retry -->|"重試耗盡"| Expire["Instance ID 過期<br/>instance-id-expiration-interval<br/>(預設 5s)"]
-    Expire --> Callback["呼叫 callback(nullptr, 0)"]
+    Expire --> Callback["呼叫 callback<br/>(nullptr, 0)"]
 
     Wait -->|"收到回應"| Done["完成"]
 ```

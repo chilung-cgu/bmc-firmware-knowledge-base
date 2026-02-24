@@ -48,19 +48,19 @@ graph TB
 
 ### PDR 類型
 
-| Type | 名稱                   | 說明                                  |
-| ---- | ---------------------- | ------------------------------------- |
-| 1    | Terminus Locator       | 描述 Terminus                         |
-| 2    | Numeric Sensor         | 數值型 Sensor 定義                    |
-| 4    | Numeric Sensor Init    | Sensor 初始化配置                     |
-| 9    | Numeric Effecter       | 數值型 Effecter 定義                  |
-| 11   | State Sensor           | 狀態型 Sensor 定義                    |
-| 14   | State Effecter         | 狀態型 Effecter 定義                  |
-| 15   | Entity Association     | 實體關聯                              |
-| 20   | FRU Record Set         | FRU 記錄集                            |
-| 22   | Compact Numeric Sensor | 精簡版數值型 Sensor（含內嵌名稱）     |
-| 26   | Sensor Auxiliary Names | Sensor 輔助名稱（多語言）             |
-| 27   | Entity Auxiliary Names | Entity 輔助名稱（用於 Terminus 命名） |
+| Type | 名稱                   | 說明                                      |
+| ---- | ---------------------- | ----------------------------------------- |
+| 1    | Terminus Locator       | 描述 Terminus                             |
+| 2    | Numeric Sensor         | 數值型 Sensor 定義                        |
+| 4    | Numeric Sensor Init    | Sensor 初始化配置                         |
+| 9    | Numeric Effecter       | 數值型 Effecter 定義                      |
+| 11   | State Sensor           | 狀態型 Sensor 定義                        |
+| 14   | State Effecter         | 狀態型 Effecter 定義                      |
+| 15   | Entity Association     | 實體關聯                                  |
+| 20   | FRU Record Set         | FRU 記錄集                                |
+| 22   | Compact Numeric Sensor | 精簡版數值型 Sensor<br>（含內嵌名稱）     |
+| 26   | Sensor Auxiliary Names | Sensor 輔助名稱<br>（多語言）             |
+| 27   | Entity Auxiliary Names | Entity 輔助名稱<br>（用於 Terminus 命名） |
 
 ---
 
@@ -254,7 +254,7 @@ sequenceDiagram
 
     Note over Device: 事件發生
 
-    Device->>BMC: PlatformEventMessage(Sensor Event)
+    Device->>BMC: PlatformEventMessage<br>(Sensor Event)
     BMC->>Device: Response (Ack)
     BMC->>BMC: 更新 D-Bus 屬性
 ```

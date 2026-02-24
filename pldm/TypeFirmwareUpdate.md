@@ -73,10 +73,12 @@ stateDiagram-v2
 
     VERIFY --> APPLY : VerifyComplete (Success)
 
-    APPLY --> READY_XFER : ApplyComplete (還有更多 Component)
-    APPLY --> ACTIVATE : ApplyComplete (最後一個 Component)
+    APPLY --> READY_XFER : ApplyComplete
 
-    ACTIVATE --> IDLE : ActivateFirmware / 自動重啟
+    READY_XFER --> ACTIVATE : ActivateFirmware
+    IDLE --> ACTIVATE : ActivateFirmware
+
+    ACTIVATE --> IDLE : 自動重啟 或 完成啟用
 
     IDLE --> IDLE : CancelUpdate
     LEARN_COMPONENTS --> IDLE : CancelUpdate
@@ -88,15 +90,15 @@ stateDiagram-v2
 >
 > 這張圖描述的是**韌體裝置（FD）本身的內部狀態**。FD 必須依此狀態機回應來自 UA（BMC）的命令，並主動發出部分命令（如 `RequestFirmwareData`）。
 >
-> | 狀態                 | 觸發事件                    | FD 在此狀態做什麼                                                                                                                                                                                                    |
-> | -------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-> | **IDLE**             | —                           | 初始/待機狀態。FD 接受 `QueryDeviceIdentifiers`、`GetFirmwareParameters` 等查詢命令，但**不接受** `UpdateComponent` 等更新命令。                                                                                     |
-> | **LEARN_COMPONENTS** | `RequestUpdate` 成功        | FD 知道 UA 打算更新哪些元件（數量由 `numComponents` 指定），開始準備。UA 後續會用 `PassComponentTable` 傳遞元件詳細列表。                                                                                            |
-> | **READY_XFER**       | `PassComponentTable` 成功   | FD 已確認元件列表，等待 UA 呼叫 `UpdateComponent` 指定要更新的元件。此狀態可重複進入（每個元件完成後回來）。                                                                                                         |
-> | **DOWNLOAD**         | `UpdateComponent` 成功      | **核心傳輸階段**。FD 主動呼叫 `RequestFirmwareData(offset, length)` 向 UA 索取韌體區塊，UA 回傳對應的二進位資料。這個過程**由 FD 控制節奏**（Pull 模式），FD 決定每次請求的 `offset` 與 `length`，直到整個映像傳完。 |
-> | **VERIFY**           | `TransferComplete` 成功     | FD 內部驗證剛收到的韌體映像完整性，例如 CRC-32 校驗、簽章驗證。UA **不需要** 做任何事，只需等待。                                                                                                                    |
-> | **APPLY**            | `VerifyComplete` 成功       | FD 將已驗證的韌體映像寫入 Flash（或其他持久儲存）。這是**不可逆的寫入操作**。完成後：若還有其他元件待更新，發 `ApplyComplete` 並回到 **READY_XFER**；若這是最後一個元件，則進入 **ACTIVATE**。                       |
-> | **ACTIVATE**         | `ApplyComplete`（最後元件） | FD 準備啟用新韌體。UA 呼叫 `ActivateFirmware` 後，FD 可能執行自我重啟（self-contained activation）或等待外部重啟。                                                                                                   |
+> | 狀態                 | 觸發事件                  | FD 在此狀態做什麼                                                                                                                                                                                                    |
+> | -------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | **IDLE**             | —                         | 初始/待機狀態。FD 接受 `QueryDeviceIdentifiers`、`GetFirmwareParameters` 等查詢命令，但**不接受** `UpdateComponent` 等更新命令。                                                                                     |
+> | **LEARN_COMPONENTS** | `RequestUpdate` 成功      | FD 知道 UA 打算更新哪些元件（數量由 `numComponents` 指定），開始準備。UA 後續會用 `PassComponentTable` 傳遞元件詳細列表。                                                                                            |
+> | **READY_XFER**       | `PassComponentTable` 成功 | FD 已確認元件列表，等待 UA 呼叫 `UpdateComponent` 指定要更新的元件。此狀態可重複進入（每個元件完成後回來）。                                                                                                         |
+> | **DOWNLOAD**         | `UpdateComponent` 成功    | **核心傳輸階段**。FD 主動呼叫 `RequestFirmwareData(offset, length)` 向 UA 索取韌體區塊，UA 回傳對應的二進位資料。這個過程**由 FD 控制節奏**（Pull 模式），FD 決定每次請求的 `offset` 與 `length`，直到整個映像傳完。 |
+> | **VERIFY**           | `TransferComplete` 成功   | FD 內部驗證剛收到的韌體映像完整性，例如 CRC-32 校驗、簽章驗證。UA **不需要** 做任何事，只需等待。                                                                                                                    |
+> | **APPLY**            | `VerifyComplete` 成功     | FD 將已驗證的韌體映像寫入 Flash（或其他持久儲存）。這是**不可逆的寫入操作**。完成後：發出 `ApplyComplete` 並回到 **READY_XFER**（等待下一個元件，或等待 UA 發出啟用命令）。                                          |
+> | **ACTIVATE**         | `ActivateFirmware` 成功   | FD 準備啟用新韌體。UA 呼叫 `ActivateFirmware` 後，FD 進入此狀態，可能執行自我重啟（self-contained activation）或等待外部電源循環。                                                                                   |
 >
 > **取消路徑說明**：
 >
@@ -163,17 +165,17 @@ sequenceDiagram
 
     Note over UA,FD: ── 階段 2：協商 ──
     UA->>FD: RequestUpdate (maxTransferSize, numComponents)
-    FD-->>UA: FirmwareDeviceMetaDataLength, GetPackageDataCmd
+    FD-->>UA: FirmwareDeviceMetaDataLength,<br>GetPackageDataCmd
 
     UA->>FD: PassComponentTable (for each component)
     FD-->>UA: CompResponse, CompResponseCode
 
     Note over UA,FD: ── 階段 3：傳輸 ──  (每個 Component)
-    UA->>FD: UpdateComponent (classification, version, size)
+    UA->>FD: UpdateComponent<br>(classification, version, size)
     FD-->>UA: CompCompatibilityResponse
 
     loop 資料傳輸
-        FD->>UA: RequestFirmwareData (offset, length)
+        FD->>UA: RequestFirmwareData<br>(offset, length)
         UA-->>FD: Component Image Data
     end
 
@@ -187,7 +189,7 @@ sequenceDiagram
     UA-->>FD: OK
 
     Note over UA,FD: ── 階段 5：啟用 ──
-    UA->>FD: ActivateFirmware (selfContainedActivation)
+    UA->>FD: ActivateFirmware<br>(selfContainedActivation)
     FD-->>UA: EstimatedTimeForActivation
 ```
 

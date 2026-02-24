@@ -74,13 +74,13 @@
 
 ### OEM 選項
 
-| 選項                  | 類型    | 預設    | 說明                              |
-| --------------------- | ------- | ------- | --------------------------------- |
-| `oem-ibm`             | feature | enabled | IBM OEM 支援                      |
-| `oem-ampere`          | feature | enabled | Ampere OEM 支援                   |
-| `oem-meta`            | feature | enabled | Meta OEM 支援                     |
-| `oem-nvidia`          | feature | enabled | NVIDIA OEM 支援                   |
-| `oem-ibm-dma-maxsize` | int     | 8384512 | IBM DMA 最大傳輸（4096-16773120） |
+| 選項                  | 類型    | 預設    | 說明                                |
+| --------------------- | ------- | ------- | ----------------------------------- |
+| `oem-ibm`             | feature | enabled | IBM OEM 支援                        |
+| `oem-ampere`          | feature | enabled | Ampere OEM 支援                     |
+| `oem-meta`            | feature | enabled | Meta OEM 支援 (下游/特定分支擴充)   |
+| `oem-nvidia`          | feature | enabled | NVIDIA OEM 支援 (下游/特定分支擴充) |
+| `oem-ibm-dma-maxsize` | int     | 8384512 | IBM DMA 最大傳輸（4096-16773120）   |
 
 ---
 

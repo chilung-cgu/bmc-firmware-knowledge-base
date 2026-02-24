@@ -125,28 +125,28 @@ BMC 透過 `PlatformManager::getPDRs()` 從遠端 Terminus 拉取 PDR：
 ```mermaid
 flowchart TD
     A["PlatformManager::initTerminus()"] --> B["getPDRRepositoryInfo(tid)"]
-    B --> C{"取得 recordCount\n& dataTransferHandleTimeout"}
-    C --> D["初始化：recordHandle = 0\n(從第一筆開始)"]
+    B --> C{"取得 recordCount<br>& dataTransfer<br>HandleTimeout"}
+    C --> D["初始化：recordHandle = 0<br>(從第一筆開始)"]
     D --> E["do-while 迴圈開始"]
 
-    E --> F["getPDR(tid, recordHandle,\n dataTransferHandle, GET_FIRSTPART)\n↓ co_await sendRecvPldmMsg"]
+    E --> F["getPDR(tid, recordHandle,<br> dataTransferHandle, GET_FIRSTPART)<br>↓ co_await sendRecvPldmMsg"]
     F --> G{"transferFlag?"}
 
-    G -->|"PLDM_PLATFORM_TRANSFER_START_AND_END\n（單次完整）"| H["appendPDR(data)"]
-    G -->|"PLDM_PLATFORM_TRANSFER_START / MIDDLE\n（分段傳輸）"| I["分段：appendPDR(data)\nGET_NEXTPART 繼續"]
+    G -->|"PLDM_PLATFORM_TRANSFER_START_AND_END<br>（單次完整）"| H["appendPDR(data)"]
+    G -->|"PLDM_PLATFORM_TRANSFER_START / MIDDLE<br>（分段傳輸）"| I["分段：appendPDR(data)<br>GET_NEXTPART 繼續"]
     I --> J["迴圈直到 transferFlag == END"]
     J --> H
 
     H --> K["nextRecordHandle = response.nextRecordHandle"]
-    K --> L{"nextRecordHandle == 0\n（沒有下一筆）?"}
+    K --> L{"nextRecordHandle<br>== 0<br>（沒有下一筆）?"}
     L -->|"否"| M["recordHandle = nextRecordHandle"]
     M --> E
     L -->|"是（全部拉取完成）"| N["terminus->parseTerminusPDRs()"]
 
-    N --> N1["解析 Numeric Sensor PDR\n→ 建立 NumericSensor 物件"]
-    N --> N2["解析 Compact Numeric Sensor\n→ 建立 NumericSensor 物件"]
-    N --> N3["解析 Auxiliary Names PDR\n→ 設定 Terminus/Sensor 名稱"]
-    N1 & N2 & N3 --> O["PDR 拉取完成\n(SensorManager::startPolling 隨後啟動)"]
+    N --> N1["解析 Numeric Sensor PDR<br>→ 建立 NumericSensor 物件"]
+    N --> N2["解析 Compact Numeric Sensor<br>→ 建立 NumericSensor 物件"]
+    N --> N3["解析 Auxiliary Names PDR<br>→ 設定 Terminus/Sensor 名稱"]
+    N1 & N2 & N3 --> O["PDR 拉取完成<br>(SensorManager::startPolling 隨後啟動)"]
 ```
 
 > **逐步說明：**

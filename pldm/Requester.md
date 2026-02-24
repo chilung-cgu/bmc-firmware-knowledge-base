@@ -98,7 +98,7 @@ sequenceDiagram
     alt 端點空閒 (activeRequest == false)
         Handler->>Handler: pollEndpointQueue(eid)
         Handler->>Req: 建立 Request 物件
-        Handler->>Timer: 啟動 Instance ID 過期計時器
+        Handler->>Timer: 啟動 Instance ID<br>過期計時器
         Handler->>Req: start() → send()
         Req->>Transport: sendMsg(eid, data, size)
     else 端點忙碌
@@ -111,11 +111,11 @@ sequenceDiagram
         Handler->>Timer: stop()
         Handler->>App: responseHandler(eid, response, len)
         Handler->>Handler: free(instanceId)
-        Handler->>Handler: pollEndpointQueue(eid) — 處理下一個
+        Handler->>Handler: pollEndpointQueue(eid)<br>— 處理下一個
     else Instance ID 過期（無回應）
         Timer->>Handler: instanceIdExpiryCallBack(key)
-        Handler->>App: responseHandler(eid, nullptr, 0) — 空回應
-        Handler->>Handler: pollEndpointQueue(eid) — 處理下一個
+        Handler->>App: responseHandler(eid, nullptr, 0)<br>— 空回應
+        Handler->>Handler: pollEndpointQueue(eid)<br>— 處理下一個
     end
 ```
 
@@ -183,7 +183,7 @@ stateDiagram-v2
     [*] --> Idle
     Idle --> Sending : start()
     Sending --> WaitingResponse : send() 成功
-    WaitingResponse --> Sending : 超時且剩餘重試次數 > 0
+    WaitingResponse --> Sending : 超時且<br>剩餘重試次數 > 0
     WaitingResponse --> Failed : 超時且重試次數耗盡
     WaitingResponse --> Success : 收到回應
     Sending --> Failed : send() 失敗

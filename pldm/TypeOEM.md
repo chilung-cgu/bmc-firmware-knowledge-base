@@ -48,10 +48,10 @@ pldm/oem/
 │   │   └── bios/          # BIOS 屬性
 │   └── pldmtool/          # OEM pldmtool 命令
 │       └── oem_ibm_cmd.cpp
-├── meta/                  # Meta OEM
+├── meta/                  # Meta OEM (特定分支/下游擴充)
 │   ├── oem_meta.cpp/hpp   # Meta OEM Handler
 │   └── utils.cpp/hpp      # Meta 工具函式
-└── nvidia/                # NVIDIA OEM
+└── nvidia/                # NVIDIA OEM (特定分支/下游擴充)
     └── oem_nvidia.hpp     # NVIDIA 初始化
 ```
 
@@ -140,16 +140,16 @@ public:
 
 > ⚠️ **簡化說明**：以下表格僅包含 upstream source code 中實際存在的 OEM。
 
-| 功能                 | IBM          | Ampere | Meta | NVIDIA |
-| -------------------- | ------------ | ------ | ---- | ------ |
-| OEM Platform Handler | ✅ 完整      | ✅     | ✅   | ✅     |
-| OEM FRU Handler      | ✅           | -      | -    | -      |
-| OEM BIOS Handler     | ✅           | -      | -    | -      |
-| OEM Utils Handler    | ✅           | -      | ✅   | -      |
-| File I/O (Type 63)   | ✅           | -      | -    | -      |
-| pldmtool 子命令      | ✅ `oem-ibm` | -      | -    | -      |
-| OEM PDR              | ✅           | ✅     | -    | -      |
-| Lamp Test            | ✅           | -      | -    | -      |
+| 功能                 | IBM          | Ampere | Meta (下游) | NVIDIA (下游) |
+| -------------------- | ------------ | ------ | ----------- | ------------- |
+| OEM Platform Handler | ✅ 完整      | ✅     | ✅          | ✅            |
+| OEM FRU Handler      | ✅           | -      | -           | -             |
+| OEM BIOS Handler     | ✅           | -      | -           | -             |
+| OEM Utils Handler    | ✅           | -      | ✅          | -             |
+| File I/O (Type 63)   | ✅           | -      | -           | -             |
+| pldmtool 子命令      | ✅ `oem-ibm` | -      | -           | -             |
+| OEM PDR              | ✅           | ✅     | -           | -             |
+| Lamp Test            | ✅           | -      | -           | -             |
 
 ---
 
@@ -174,10 +174,10 @@ meson setup build -Doem-ibm=enabled
 # 啟用 Ampere OEM
 meson setup build -Doem-ampere=enabled
 
-# 啟用 Meta OEM
+# 啟用 Meta OEM (特定分支)
 meson setup build -Doem-meta=enabled
 
-# 啟用 NVIDIA OEM
+# 啟用 NVIDIA OEM (特定分支)
 meson setup build -Doem-nvidia=enabled
 
 # 停用所有 OEM

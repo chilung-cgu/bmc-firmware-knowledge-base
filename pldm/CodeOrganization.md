@@ -18,8 +18,8 @@ pldm/
 ├── oem/                      # OEM 擴充
 │   ├── ampere/               # Ampere OEM
 │   ├── ibm/                  # IBM OEM
-│   ├── meta/                 # Meta OEM
-│   └── nvidia/               # NVIDIA OEM
+│   ├── meta/                 # Meta OEM (特定分支)
+│   └── nvidia/               # NVIDIA OEM (特定分支)
 ├── common/                   # 共用工具
 ├── configurations/           # 配置檔案
 ├── pldmtool/                 # CLI 工具
@@ -322,10 +322,10 @@ oem/
 │   ├── configurations/       # OEM 配置
 │   │   └── bios/             # BIOS 屬性 JSON
 │   └── pldmtool/             # OEM pldmtool 命令
-├── meta/                     # Meta OEM
+├── meta/                     # Meta OEM (特定分支)
 │   ├── oem_meta.cpp/hpp      # Meta OEM Handler
 │   └── utils.cpp/hpp         # Meta 工具函式
-└── nvidia/                   # NVIDIA OEM
+└── nvidia/                   # NVIDIA OEM (特定分支)
     └── oem_nvidia.hpp        # NVIDIA 初始化
 ```
 

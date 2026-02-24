@@ -238,14 +238,15 @@ stateDiagram-v2
 >
 > **正確的狀態轉移摘要（DSP0267）**：
 >
-> | 狀態             | 觸發進入此狀態的命令                             |
-> | ---------------- | ------------------------------------------------ |
-> | LEARN_COMPONENTS | `RequestUpdate`（UA → FD）                       |
-> | READY_XFER       | `PassComponentTable`（UA → FD）                  |
-> | DOWNLOAD         | `UpdateComponent`（UA → FD）                     |
-> | VERIFY           | `TransferComplete`（FD → UA，FD 主動）           |
-> | APPLY            | `VerifyComplete`（FD → UA，FD 主動）             |
-> | ACTIVATE         | `ApplyComplete` 最後一個元件（FD → UA，FD 主動） |
+> | 狀態             | 觸發進入此狀態的命令                   |
+> | ---------------- | -------------------------------------- |
+> | LEARN_COMPONENTS | `RequestUpdate`（UA → FD）             |
+> | READY_XFER       | `PassComponentTable`（UA → FD）        |
+> | DOWNLOAD         | `UpdateComponent`（UA → FD）           |
+> | VERIFY           | `TransferComplete`（FD → UA，FD 主動） |
+> | APPLY            | `VerifyComplete`（FD → UA，FD 主動）   |
+> | READY_XFER       | `ApplyComplete`（FD → UA，FD 主動）    |
+> | ACTIVATE         | `ActivateFirmware`（UA → FD）          |
 
 ### FW Update 命令
 

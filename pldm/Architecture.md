@@ -249,7 +249,7 @@ sequenceDiagram
     participant DBus as D-Bus
 
     Host->>KernelMCTP: PLDM Request (over physical MCTP)
-    Note over KernelMCTP: Kernel 路由查表（由 mctpd 在 setup 時建立）
+    Note over KernelMCTP: Kernel 路由查表<br>（由 mctpd 在 setup 時建立）
     KernelMCTP->>pldmd: recvfrom(AF_MCTP socket)
     pldmd->>pldmd: Route by PLDM Type
     pldmd->>Handler: dispatch(request)
@@ -289,7 +289,7 @@ sequenceDiagram
     Req->>Req: allocateInstanceId()
     Req->>libpldm: encode_xxx_req()
     Req->>KernelMCTP: sendto(AF_MCTP socket, EID=x)
-    Note over KernelMCTP: Kernel 查路由表，決定實體傳輸路徑
+    Note over KernelMCTP: Kernel 查路由表，<br>決定實體傳輸路徑
     KernelMCTP->>Device: PLDM Request (over physical MCTP)
     Device->>KernelMCTP: PLDM Response
     KernelMCTP->>Req: recvfrom(AF_MCTP socket)

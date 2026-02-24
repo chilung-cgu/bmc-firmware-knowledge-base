@@ -64,37 +64,43 @@ graph TB
 
 每個 PLDM 訊息包含以下欄位：
 
-| 欄位           | 大小   | 說明                     |
-| -------------- | ------ | ------------------------ |
-| Instance ID    | 5 bits | 請求/回應配對識別符      |
-| Header Version | 2 bits | PLDM 標頭版本 (固定 00b) |
-| PLDM Type      | 6 bits | PLDM 類型代碼            |
-| Command Code   | 8 bits | 命令代碼                 |
-| Payload        | 可變   | 命令特定資料             |
+| 欄位           | 大小   | 說明                             |
+| -------------- | ------ | -------------------------------- |
+| Request (Rq)   | 1 bit  | 1=請求, 0=回應                   |
+| Datagram (D)   | 1 bit  | 1=Datagram (不須對應的 Response) |
+| Reserved (Rs)  | 1 bit  | 保留位元 (固定為 0)              |
+| Instance ID    | 5 bits | 請求/回應配對識別符              |
+| Header Version | 2 bits | PLDM 標頭版本 (固定 00b)         |
+| PLDM Type      | 6 bits | PLDM 類型代碼                    |
+| Command Code   | 8 bits | 命令代碼                         |
+| Payload        | 可變   | 命令特定資料                     |
 
 ### 請求訊息格式
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Byte 0  │  Byte 1   │  Byte 2   │  Byte 3...N        │
-├──────────┼───────────┼───────────┼────────────────────┤
-│ IID │ Hdr│ PLDM Type │  Command  │  Request Payload   │
-│ (5) │(2) │   (6)     │   (8)     │                    │
-└─────────────────────────────────────────────────────────┘
+```text
+┌─────────────────┬───────────────┬───────────┬────────────────────┐
+│      Byte 0     │     Byte 1    │  Byte 2   │  Byte 3...N        │
+├┬─┬─┬────────────┼────┬──────────┼───────────┼────────────────────┤
+│R│D│R│ Instance │Hdr │ PLDM Type│  Command  │  Request Payload   │
+│q│ │s│ ID (5)   │(2) │   (6)    │   (8)     │                    │
+│1│1│1│          │    │          │           │                    │
+└┴─┴─┴────────────┴────┴──────────┴───────────┴────────────────────┘
 
-Bit 7 of Byte 0: Request bit (1 = Request, 0 = Response)
-Bit 6 of Byte 0: D bit (Datagram, no response expected)
+* Rq (Bit 7 of Byte 0): Request bit (1 = Request, 0 = Response)
+* D  (Bit 6 of Byte 0): Datagram bit (1 = Datagram, 不須回應; 0 = Request/Response 模式，Request 發出後必須等待對應的 Response)
+* Rs (Bit 5 of Byte 0): Reserved (固定為 0)
 ```
 
 ### 回應訊息格式
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Byte 0  │  Byte 1   │  Byte 2   │  Byte 3    │  Byte 4...N    │
-├──────────┼───────────┼───────────┼────────────┼────────────────┤
-│ IID │ Hdr│ PLDM Type │  Command  │ Completion │ Response       │
-│ (5) │(2) │   (6)     │   (8)     │   Code     │ Payload        │
-└─────────────────────────────────────────────────────────────────┘
+```text
+┌─────────────────┬───────────────┬───────────┬────────────┬────────────────┐
+│      Byte 0     │     Byte 1    │  Byte 2   │  Byte 3    │  Byte 4...N    │
+├┬─┬─┬────────────┼────┬──────────┼───────────┼────────────┼────────────────┤
+│R│D│R│ Instance │Hdr │ PLDM Type│  Command  │ Completion │ Response       │
+│q│ │s│ ID (5)   │(2) │   (6)    │   (8)     │   Code     │ Payload        │
+│1│1│1│          │    │          │           │   (8)      │                │
+└┴─┴─┴────────────┴────┴──────────┴───────────┴────────────┴────────────────┘
 ```
 
 ### Completion Codes
@@ -252,7 +258,7 @@ sequenceDiagram
 
     Note over BMC,New: TID 分配流程（BMC 主動發起）
     BMC->>New: GetTID Request
-    New->>BMC: GetTID Response (TID: 0x00 = PLDM_TID_UNASSIGNED)
+    New->>BMC: GetTID Response<br>(TID: 0x00 = PLDM_TID_UNASSIGNED)
     BMC->>New: SetTID Request (TID: 2)
     New->>BMC: SetTID Response (Success)
 

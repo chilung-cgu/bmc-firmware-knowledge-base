@@ -317,12 +317,12 @@ cat /tmp/pldm_flight_recorder
 
 pldmd 透過編譯時條件式（`#ifdef`）支援多家 OEM 擴充。以下為 upstream source code 中實際存在的 OEM：
 
-| OEM    | 編譯旗標     | Meson 選項   | 來源目錄      | 說明                                                                         |
-| ------ | ------------ | ------------ | ------------- | ---------------------------------------------------------------------------- |
-| Ampere | `OEM_AMPERE` | `oem-ampere` | `oem/ampere/` | Ampere 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_AMPERE` 守護                |
-| IBM    | `OEM_IBM`    | `oem-ibm`    | `oem/ibm/`    | 完整 OEM 處理（Host/File I/O 等），在 `pldmd.cpp` 中以 `#ifdef OEM_IBM` 守護 |
-| Meta   | `OEM_META`   | `oem-meta`   | `oem/meta/`   | Meta 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_META` 守護                    |
-| NVIDIA | `OEM_NVIDIA` | `oem-nvidia` | `oem/nvidia/` | NVIDIA 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_NVIDIA` 守護                |
+| OEM    | 編譯旗標     | Meson 選項   | 來源目錄      | 說明                                                                              |
+| ------ | ------------ | ------------ | ------------- | --------------------------------------------------------------------------------- |
+| Ampere | `OEM_AMPERE` | `oem-ampere` | `oem/ampere/` | Ampere 平台支援，在 `pldmd.cpp` 中以 `#ifdef OEM_AMPERE` 守護                     |
+| IBM    | `OEM_IBM`    | `oem-ibm`    | `oem/ibm/`    | 完整 OEM 處理（Host/File I/O 等），在 `pldmd.cpp` 中以 `#ifdef OEM_IBM` 守護      |
+| Meta   | `OEM_META`   | `oem-meta`   | `oem/meta/`   | Meta 平台支援 (特定分支/下游擴充)，在 `pldmd.cpp` 中以 `#ifdef OEM_META` 守護     |
+| NVIDIA | `OEM_NVIDIA` | `oem-nvidia` | `oem/nvidia/` | NVIDIA 平台支援 (特定分支/下游擴充)，在 `pldmd.cpp` 中以 `#ifdef OEM_NVIDIA` 守護 |
 
 ### OEM 初始化模式（`pldmd.cpp` L328-352）
 
@@ -446,8 +446,8 @@ systemctl restart pldmd
 | `system-specific-bios-json`       | feature | disabled | —                        | 系統特定 BIOS JSON 支援           |
 | `oem-ibm`                         | feature | enabled  | —                        | IBM OEM 支援                      |
 | `oem-ampere`                      | feature | enabled  | —                        | Ampere OEM 支援                   |
-| `oem-meta`                        | feature | enabled  | —                        | Meta OEM 支援                     |
-| `oem-nvidia`                      | feature | enabled  | —                        | NVIDIA OEM 支援                   |
+| `oem-meta`                        | feature | enabled  | —                        | Meta OEM 支援 (特定分支)          |
+| `oem-nvidia`                      | feature | enabled  | —                        | NVIDIA OEM 支援 (特定分支)        |
 
 ---
 
