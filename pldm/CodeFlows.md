@@ -317,10 +317,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Discover["MCTP 端點探索"] --> Init["TerminusManager.initMctpTerminus()"]
+    Discover["MCTP 端點探索"] --> Init["TerminusManager.<br/>initMctpTerminus()"]
     Init --> TID["GetTID / SetTID"]
-    TID --> Types["GetPLDMTypes /<br>GetPLDMCommands"]
-    Types --> PlatInit["PlatformManager<br>.initTerminus()"]
+    TID --> Types["GetPLDMTypes /<br/>GetPLDMCommands"]
+    Types --> PlatInit["PlatformManager.<br/>initTerminus()"]
     PlatInit --> FRU["GetFRURecordTable"]
     FRU --> GetPDR["GetPDRRepositoryInfo<br>→ GetPDR 迴圈"]
     GetPDR --> Parse["terminus→<br>parseTerminusPDRs()"]

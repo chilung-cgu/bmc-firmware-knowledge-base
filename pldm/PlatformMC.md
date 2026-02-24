@@ -478,20 +478,20 @@ flowchart TD
 
     D -->|"PLDM_SENSOR_EVENT"| E["decode_sensor_event_data()"]
     E --> F{{"sensorEventClassType?"}}
-    F -->|"PLDM_NUMERIC_SENSOR_STATE"| G["processNumericSensorEvent(tid, sensorId)"]
-    G --> G1["decode_numeric_sensor_data()<br>取得 eventState, previousEventState, presentReading"]
-    G1 --> G2["triggerNumericSensorThresholdEvent()<br>逐段觸發閾值事件（支援跨閾值）"]
-    G2 --> G3["sensor->triggerThresholdEvent(level, direction, value)<br>更新 D-Bus 告警狀態"]
-    F -->|"PLDM_STATE_SENSOR_STATE / PLDM_SENSOR_OP_STATE"| F2["log: Unsupported → return PLDM_ERROR"]
+    F -->|"PLDM_NUMERIC_<br/>SENSOR_STATE"| G["processNumericSensorEvent<br/>(tid, sensorId)"]
+    G --> G1["decode_numeric_sensor_data()<br/>取得 eventState,<br/>previousEventState,<br/>presentReading"]
+    G1 --> G2["triggerNumericSensor<br/>ThresholdEvent()<br/>逐段觸發閾值事件<br/>（支援跨閾值）"]
+    G2 --> G3["sensor->trigger<br/>ThresholdEvent<br/>(level, direction, value)<br/>更新 D-Bus 告警狀態"]
+    F -->|"PLDM_STATE_SENSOR_STATE /<br/>PLDM_SENSOR_OP_STATE"| F2["log: Unsupported →<br/>return PLDM_ERROR"]
 
-    D -->|"PLDM_CPER_EVENT"| H["processCperEvent(tid, eventId)"]
-    H --> H1["decode_pldm_platform_cper_event()"]
+    D -->|"PLDM_CPER_EVENT"| H["processCperEvent<br/>(tid, eventId)"]
+    H --> H1["decode_pldm_platform<br/>_cper_event()"]
     H1 --> H2["寫入 /var/cper/cper-XXXXXX 臨時檔"]
-    H2 --> H3["createCperDumpEntry() 呼叫 D-Bus<br>xyz.openbmc_project.dump.faultlog"]
+    H2 --> H3["createCperDumpEntry()<br/>呼叫 D-Bus<br/>xyz.openbmc_project<br/>.dump.faultlog"]
 
-    D -->|"PLDM_MESSAGE_POLL_EVENT"| I["decode_pldm_message_poll_event_data()"]
-    I --> I1["terminus->pollEvent = true<br>terminus->pollEventId = event_id<br>terminus->pollDataTransferHandle = handle"]
-    I1 --> I2["return PLDM_SUCCESS<br>（等待下一輪 SensorManager Polling 中觸發輪詢）"]
+    D -->|"PLDM_MESSAGE_<br/>POLL_EVENT"| I["decode_pldm_message<br/>_poll_event_data()"]
+    I --> I1["terminus-><br/>pollEvent = true<br/>terminus-><br/>pollEventId = event_id<br/>terminus-><br/>pollDataTransferHandle = handle"]
+    I1 --> I2["return PLDM_SUCCESS<br/>（等待下一輪 polling<br/>中觸發輪詢）"]
 ```
 
 **路徑 B：主動輪詢（PollForPlatformEventMessage）**

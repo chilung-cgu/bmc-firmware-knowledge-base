@@ -23,7 +23,7 @@ graph LR
     ST --> Host["Host 透過 GetBIOSTable 讀取"]
     AT --> Host
     AVT --> Host
-    Host -->|"SetBIOSAttributeCurrentValue"| BIOSConfig
+    Host -->|"SetBIOSAttribute<br/>CurrentValue"| BIOSConfig
     BIOSConfig -->|"更新"| DBus["D-Bus 屬性"]
 ```
 
