@@ -362,7 +362,45 @@ if (rc != PLDM_SUCCESS || resp == nullptr) {
 | 端點介面       | `au.com.codeconstruct.MCTP.Endpoint1`     |
 | 篩選 PLDM 支援 | MCTP Message Type = `1`（`mctpTypePLDM`） |
 
-### D-Bus 信號監聽
+### 內部實作細節：D-Bus Match 規則與信號監聽
+
+`MctpDiscovery` 的建構函式註冊了三個 `sdbusplus::bus::match_t` 來監聽 D-Bus 信號：
+
+```cpp
+MctpDiscovery::MctpDiscovery(
+    sdbusplus::bus_t& bus,
+    std::initializer_list<MctpDiscoveryHandlerIntf*> list) :
+    bus(bus),
+    // 1. 監聽新端點加入 (InterfacesAdded)
+    mctpEndpointAddedSignal(
+        bus, interfacesAdded(MCTPPath), /* MCTPPath = "/au/com/codeconstruct/mctp1" */
+        [this](sdbusplus::message_t& msg) { this->discoverEndpoints(msg); }),
+    
+    // 2. 監聽端點移除 (InterfacesRemoved)
+    mctpEndpointRemovedSignal(
+        bus, interfacesRemoved(MCTPPath),
+        [this](sdbusplus::message_t& msg) { this->removeEndpoints(msg); }),
+    
+    // 3. 監聽端點屬性變更 (PropertiesChanged)，用於監控連線狀態 (Connectivity)
+    mctpEndpointPropChangedSignal(
+        bus, propertiesChangedNamespace(MCTPPath, MCTPInterfaceCC), 
+        [this](sdbusplus::message_t& msg) { this->propertiesChangedCb(msg); }),
+    
+    handlers(list)
+{
+    // ... (初始化與現有端點輪詢) ...
+}
+```
+
+> 💡 **補充觀念：D-Bus Service Name 與 Object Path 的差異**
+> 
+> 在上面的程式碼中，`interfacesAdded(MCTPPath)` 使用的是以 **斜線 `/` 分隔的 Object Path** (`/au/com/codeconstruct/mctp1`)，而不是以 **句號 `.` 分隔的 Service Name** (`au.com.codeconstruct.MCTP1`)。
+>
+> 這是因為 D-Bus 的事件訂閱機制如下：
+> - **Service Name (服務名稱)**：像是「**公司招牌**」。`au.com.codeconstruct.MCTP1` 是 `mctpd` 這支程式在 D-Bus 網路上註冊的名稱，代表這家公司。
+> - **Object Path (物件路徑)**：像是「**公司內部的檔案目錄**」。`/au/com/codeconstruct/mctp1` 是這家公司存放資料的目錄樹根節點。
+> 
+> 當 `mctpd` 發現新的端點時，它是在**自己的物件目錄樹底下**新增一個物件（例如 `/au/.../endpoints/8`）。因此，`sdbusplus` 底層的 `interfacesAdded()` API 監聽的是：「**在哪個目錄路徑下發生了新增事件？**」，所以我們必須提供 Object Path 給這個 Match Rule。這與「我們正在跟 `mctpd` 服務通訊」的整體概念是完全吻合沒有衝突的！
 
 ```mermaid
 graph TB
@@ -390,6 +428,67 @@ graph TB
 > - **PropertiesChanged**：端點屬性變更（如 Connectivity 狀態）時，更新可用性。
 >
 > **白話總結**：MctpDiscovery 像「哨兵」，監控誰來了、誰走了、誰的狀態變了，並即時通知相關模組。
+
+### 內部實作細節：啟動時的輪詢邏輯 (GetSubTree)
+
+如果在 `pldmd` 啟動前，`mctpd` 已經把端點建好了，就不會觸發 `InterfacesAdded`。因此 `MctpDiscovery` 在建構時會主動撈取現有端點：
+
+```cpp
+// 在 MctpDiscovery::getMctpInfos() 中：
+pldm::utils::GetSubTreeResponse mapperResponse;
+// 透過 ObjectMapper 尋找所有實作 MCTPEndpoint 介面的物件
+mapperResponse = pldm::utils::DBusHandler().getSubtree(
+    MCTPPath, 0, std::vector<std::string>({MCTPEndpoint::interface}));
+
+for (const auto& [path, services] : mapperResponse) {
+    for (const auto& serviceIter : services) {
+        // ... (取得各項屬性) ...
+        auto types = std::get<MCTPMsgTypes>(epProps);
+        
+        // 關鍵過濾：確認 SupportedMessageTypes 中包含 PLDM (Type 1)
+        if (std::find(types.begin(), types.end(), mctpTypePLDM) != types.end()) {
+            auto mctpInfo = MctpInfo(eid, uuid, "", networkId, std::nullopt);
+            mctpInfoMap[std::move(mctpInfo)] = availability;
+        }
+    }
+}
+```
+
+**白話總結**：`pldmd` 啟動時先做一次「戶口普查」，找出此時已經存在且支援 PLDM 的端點，並把目前為 `Available` 的端點登記下來。
+
+### 內部實作細節：D-Bus 訊息解析與過濾
+
+當有新的端點加入時，D-Bus 的 `InterfacesAdded` 信號會夾帶複雜的字典結構，`MctpDiscovery` 會將其解開並比對：
+
+```cpp
+void MctpDiscovery::getAddedMctpInfos(sdbusplus::message_t& msg, MctpInfos& mctpInfos)
+{
+    sdbusplus::message::object_path objPath;
+    std::map<std::string, std::map<std::string, dbus::Value>> interfaces;
+
+    // 解開 D-Bus 字典
+    msg.read(objPath, interfaces);
+
+    for (const auto& [intfName, properties] : interfaces) {
+        // 只看 MCTP Endpoint 介面
+        if (intfName == MCTPEndpoint::interface) {
+            // 解析 NetworkId, EID 和 SupportedMessageTypes
+            auto networkId = std::get<NetworkId>(properties.at("NetworkId"));
+            auto eid = std::get<mctp_eid_t>(properties.at("EID"));
+            auto types = std::get<std::vector<uint8_t>>(properties.at("SupportedMessageTypes"));
+
+            // 關鍵過濾：不是所有 MCTP 端點 pldmd 都想理，只理 PLDM (Type 1) 的端點
+            if (std::find(types.begin(), types.end(), mctpTypePLDM) != types.end()) {
+                // 打包成 MctpInfo 準備通知各 Manager
+                auto mctpInfo = MctpInfo(eid, uuid, "", networkId, std::nullopt);
+                mctpInfos.emplace_back(std::move(mctpInfo));
+            }
+        }
+    }
+}
+```
+
+**白話總結**：`mctpd` 廣播「有新鄰居搬進來了」，`MctpDiscovery` 會去檢查他的基本資料表，如果這鄰居**會講 PLDM 語言**（`mctpTypePLDM`），才建檔並通報給 `fwManager` 與 `platformManager` 進行業務接洽。
 
 ### Handler 介面
 
